@@ -300,7 +300,7 @@ func main() {
 				cli.IntFlag{
 					Name: "ttl",
 					Value: 4 * 60,
-					Usage: "Time in minutes that the file should be available",
+					Usage: "Time in minutes that the file should be available (doesn't work yet)",
 				},
 			},
 		},
