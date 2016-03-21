@@ -176,6 +176,8 @@ func sendSecret(c *cli.Context) {
 	fmt.Println("File uploaded!")
 	fmt.Printf("Key: %s\nID: %s\nURL: https://s3-us-west-1.amazonaws.com/exosite-secretshare/%s\n",
 		keystr, responseData.Id, responseData.Id)
+	fmt.Println("To receive this secret:")
+	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
 }
 
 func decrypt(ciphertext, key []byte) []byte {
