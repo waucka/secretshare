@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"bufio"
 	"net/http"
-	"net/http/httputil"
+	//"net/http/httputil"
 	"encoding/json"
 	"strings"
 	"path/filepath"
@@ -70,7 +70,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	req.ContentLength = encrypter.TotalSize
 	commonlib.DEBUGPrintln("Content-Length set!")
 
-	dump, err := httputil.DumpRequestOut(req, false)
+	/*dump, err := httputil.DumpRequestOut(req, false)
 	if err == nil {
 		fmt.Println("Request:")
 		fmt.Printf("%q", dump)
@@ -79,7 +79,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 		fmt.Println("Error dumping request!")
 		fmt.Println(err.Error())
 		os.Exit(1)
-	}
+	}*/
 
 	commonlib.DEBUGPrintf("Uploading %d bytes...\n", req.ContentLength)
 	resp, err := uploadClient.Do(req)
