@@ -24,6 +24,7 @@ contents=$(cat test.txt)
 
 if [ "x$contents" == "xThis is a test" ]; then
     echo "PASS"
+    rm test.txt
     exit 0
 fi
 
