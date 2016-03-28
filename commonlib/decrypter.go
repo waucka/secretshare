@@ -52,6 +52,7 @@ func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, 
 		return nil, io.ErrUnexpectedEOF
 	}
 	if headerData[0] != byte(paddingLen) {
+		DEBUGPrintf("Decrypter: header data says padding is %d, but we say it's %d\n", headerData[0], paddingLen)
 		return nil, DataCorruptionError
 	}
 	iv := headerData[1:]
