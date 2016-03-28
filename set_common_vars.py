@@ -13,6 +13,7 @@ with open('commonlib/consts.go', 'wb') as f:
     f.write("""package commonlib
 var (
 	EndpointBaseURL = "{EndpointBaseURL}"
+	BucketRegion = "{BucketRegion}"
 	Bucket = "{Bucket}"
 )
 """.format(**vars_dict))

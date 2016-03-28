@@ -40,6 +40,7 @@ import (
 
 type clientConfig struct {
 	EndpointBaseURL string `json:"endpointBaseUrl"`
+	BucketRegion string `json:"bucket_region"`
 	Bucket string `json:"bucket"`
 }
 
@@ -50,6 +51,7 @@ func loadConfig(configPath string) error {
 	if os.IsNotExist(err) {
 		// No file; use defaults.
 		config.EndpointBaseURL = commonlib.EndpointBaseURL
+		config.BucketRegion = commonlib.BucketRegion
 		config.Bucket = commonlib.Bucket
 		return nil
 	}
@@ -230,8 +232,8 @@ func sendSecret(c *cli.Context) {
 	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key)
 
 	fmt.Println("File uploaded!")
-	fmt.Printf("Key: %s\nID: %s\nURL: https://s3-us-west-1.amazonaws.com/exosite-secretshare/%s\n",
-		keystr, responseData.Id, responseData.Id)
+	fmt.Printf("Key: %s\nID: %s\nURL: https://s3-%s.amazonaws.com/%s/%s\n",
+		keystr, responseData.Id, config.BucketRegion, config.Bucket, responseData.Id)
 	fmt.Println("To receive this secret:")
 	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
 }
@@ -246,6 +248,7 @@ func decrypt(ciphertext, key []byte) []byte {
 
 	if len(raw) % aes.BlockSize != 0 {
 		fmt.Println("Data is malformed!")
+		fmt.Printf("Detail: length is %d, which is not a multiple of %d\n", len(raw), aes.BlockSize)
 		os.Exit(1)
 	}
 
@@ -275,7 +278,7 @@ func recvSecret(c *cli.Context) {
 	}
 
 	// Download metadata
-	resp, err := http.Get(fmt.Sprintf("https://s3-us-west-1.amazonaws.com/exosite-secretshare/meta/%s", id))
+	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s", config.BucketRegion, config.Bucket, id))
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
@@ -322,7 +325,7 @@ func recvSecret(c *cli.Context) {
 	defer outf.Close()
 
 	// Download data
-	resp, err = http.Get(fmt.Sprintf("https://s3-us-west-1.amazonaws.com/exosite-secretshare/%s", id))
+	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s", config.BucketRegion, config.Bucket, id))
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
@@ -361,6 +364,11 @@ func main() {
 			Name: "endpoint",
 			Value: config.EndpointBaseURL,
 			Usage: "API endpoint to connect to when requesting IDs",
+		},
+		cli.StringFlag{
+			Name: "bucket-region",
+			Value: config.BucketRegion,
+			Usage: "Region for S3 bucket to store files in",
 		},
 		cli.StringFlag{
 			Name: "bucket",
