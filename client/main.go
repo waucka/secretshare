@@ -51,6 +51,13 @@ func loadConfig(configPath string) error {
 	return nil
 }
 
+func cleanUrl(url string) string {
+	if strings.HasSuffix(url, "/") {
+		return url[:len(url) - 1]
+	}
+	return url
+}
+
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
 	encrypter, err := commonlib.NewEncrypter(stream, messageSize, key)
 	if err != nil {
@@ -122,7 +129,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 }
 
 func sendSecret(c *cli.Context) {
-	config.EndpointBaseURL = c.Parent().String("endpoint")
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
@@ -240,7 +247,7 @@ func decrypt(ciphertext, key []byte) []byte {
 }
 
 func recvSecret(c *cli.Context) {
-	config.EndpointBaseURL = c.Parent().String("endpoint")
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
 	keystr := c.Args()[1]
