@@ -1,0 +1,4 @@
+{
+    "EndpointBaseURL": "http://localhost:8080",
+    "Bucket": "secretshare"
+}

@@ -5,6 +5,10 @@ import (
 	"crypto/rand"
 	"time"
 	"log"
+	"fmt"
+	"os"
+	"io/ioutil"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"github.com/gin-gonic/gin"
@@ -15,13 +19,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 
 	"github.com/waucka/secretshare/commonlib"
+	"github.com/codegangsta/cli"
 )
 
 var (
 	ErrIDGen = errors.New("Failed to generate random ID!")
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
+
+	DefaultConfigPath = "/etc/secretshare-server.json"
 )
+
+type serverConfig struct {
+	ListenAddr string `json:"addr"`
+	ListenPort int `json:"port"`
+}
 
 func generateId() (string, error) {
 	idbin := make([]byte, 32)
@@ -50,11 +62,50 @@ func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string
 }
 
 func main() {
+	app := cli.NewApp()
+	app.Name = "secretshare-server"
+	app.Usage = "Securely share secrets"
+	app.Action = runServer
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name: "config",
+			Value: "/etc/secretshare-server.json",
+			Usage: "Server configuration file",
+		},
+	}
+	app.Run(os.Args)
+}
+
+func runServer(c *cli.Context) {
 	sess := session.New(&aws.Config{
 		Region: aws.String("us-west-1"),
 		Credentials: credentials.NewSharedCredentials("", "default"),
 	})
 	svc := s3.New(sess)
+
+	var config serverConfig
+	{
+		configPath := c.String("config")
+		if len(configPath) == 0 {
+			configPath = DefaultConfigPath
+		}
+		configFile, err := os.Open(configPath)
+		if err != nil {
+			log.Fatalf(`Failed to open config file "%s"`, configPath)
+		}
+		configData, err := ioutil.ReadAll(configFile)
+		if err != nil {
+			log.Fatalf(`Failed to read config file "%s"`, configPath)
+		}
+		err = json.Unmarshal(configData, &config)
+		if err != nil {
+			log.Fatalf(`Config file "%s" is not valid JSON`, configPath)
+		}
+
+		if len(config.ListenAddr) == 0 {
+			config.ListenAddr = "0.0.0.0"
+		}
+	}
 
 	r := gin.Default()
 	r.POST("/upload", func(c *gin.Context) {
@@ -100,5 +151,6 @@ func main() {
 		})
 	})
 
-	r.Run(":8080")
+	log.Printf("Listening on %s:%d\n", config.ListenAddr, config.ListenPort)
+	r.Run(fmt.Sprintf("%s:%d", config.ListenAddr, config.ListenPort))
 }

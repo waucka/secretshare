@@ -7,8 +7,6 @@ import (
 )
 
 var (
-	BaseURL = "http://localhost:8080/"
-	Bucket = "exosite-secretshare"
 	DEBUG = false
 	BadBlockSizeError = errors.New("Block size is >256?  WTF?")
 	ShortReadError = errors.New("Read was truncated, but then read more data!  This should never happen!")

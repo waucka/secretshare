@@ -22,9 +22,34 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-var (
-	endpointBaseURL = "http://localhost:8080"
-)
+type clientConfig struct {
+	EndpointBaseURL string `json:"endpointBaseUrl"`
+	Bucket string `json:"bucket"`
+}
+
+var config clientConfig
+
+func loadConfig(configPath string) error {
+	configFile, err := os.Open(configPath)
+	if os.IsNotExist(err) {
+		// No file; use defaults.
+		config.EndpointBaseURL = commonlib.EndpointBaseURL
+		config.Bucket = commonlib.Bucket
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	configData, err := ioutil.ReadAll(configFile)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(configData, &config)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
 	encrypter, err := commonlib.NewEncrypter(stream, messageSize, key)
@@ -97,6 +122,8 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 }
 
 func sendSecret(c *cli.Context) {
+	config.EndpointBaseURL = c.Parent().String("endpoint")
+	config.Bucket = c.Parent().String("bucket")
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
 	if err != nil {
@@ -130,7 +157,12 @@ func sendSecret(c *cli.Context) {
 	}
 	keystr := hex.EncodeToString(key)
 
-	resp, err := http.Post(endpointBaseURL + "/upload", "application/json", buf)
+	resp, err := http.Post(config.EndpointBaseURL + "/upload", "application/json", buf)
+	if err != nil {
+		fmt.Println("Failed to connect to server!")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 	if resp.Body == nil {
 		fmt.Println("No data received from server!")
 		fmt.Println(err.Error())
@@ -148,6 +180,7 @@ func sendSecret(c *cli.Context) {
 	if err != nil {
 		fmt.Println("Malformed response received from server!")
 		fmt.Println(err.Error())
+		fmt.Println(string(bodyBytes))
 		os.Exit(1)
 	}
 
@@ -207,6 +240,8 @@ func decrypt(ciphertext, key []byte) []byte {
 }
 
 func recvSecret(c *cli.Context) {
+	config.EndpointBaseURL = c.Parent().String("endpoint")
+	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
 	keystr := c.Args()[1]
 	key, err := hex.DecodeString(keystr)
@@ -288,9 +323,28 @@ func recvSecret(c *cli.Context) {
 }
 
 func main() {
+	err := loadConfig("~/.secretsharerc")
+	if err != nil {
+		fmt.Println("Failed to load configuration")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
 	app := cli.NewApp()
 	app.Name = "secretshare"
 	app.Usage = "Securely share secrets"
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name: "endpoint",
+			Value: config.EndpointBaseURL,
+			Usage: "API endpoint to connect to when requesting IDs",
+		},
+		cli.StringFlag{
+			Name: "bucket",
+			Value: config.Bucket,
+			Usage: "S3 bucket to store files in",
+		},
+	}
 	app.Commands = []cli.Command{
 		{
 			Name: "send",
