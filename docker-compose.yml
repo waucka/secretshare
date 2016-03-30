@@ -1,0 +1,4 @@
+api:
+    build: .
+    ports:
+        - 443:5000

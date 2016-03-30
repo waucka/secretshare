@@ -8,3 +8,4 @@ vars.json
 install_linux.sh
 install_osx.sh
 build
+aws_creds
