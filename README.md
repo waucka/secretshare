@@ -6,8 +6,10 @@ secretshare lets you share secret data in a relatively secure manner.
 
 You will need Go (probably at least 1.5?), Python 2, and make.  Don't forget to set your `$GOPATH` if you don't have it set already.
 
-1. Copy vars.json.example to vars.json and set the variables within according to your setup.
-2. Run `make`, and it should build secretshare and secretshare-server.
+1. Run `./setup_build.sh`.  This just creates the output directories.
+2. Copy vars.json.example to vars.json and set the variables within according to your setup.
+3. Run `make`, and it should build secretshare and secretshare-server.  You can also run `make linux`, `make osx`, or `make windows` to only build binaries for the platform of your choice.  Binaries will be in `build/$OS-$ARCH/`.  `$ARCH` can only be `amd64` right now.
+4. Run `make test` to run tests.  You will need to set `$TEST_BUCKET_REGION`, `$TEST_BUCKET`, `$CURRENT_OS`, and `$CURRENT_ARCH` appropriately in order for the integration tests to run.  `go test github.com/waucka/secretshare/commonlib` will run the unit tests for encryption and decryption.
 
 ## Installation
 
