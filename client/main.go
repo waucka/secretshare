@@ -46,7 +46,7 @@ type clientConfig struct {
 
 var (
 	config clientConfig
-	Version = 1
+	Version = 1 //deploy.sh:VERSION
 )
 
 func loadConfig(configPath string) error {
@@ -412,6 +412,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "secretshare"
 	app.Usage = "Securely share secrets"
+	app.Version = fmt.Sprintf("%d", Version)
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name: "endpoint",

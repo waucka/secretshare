@@ -43,7 +43,7 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
-	Version = 1
+	Version = 1 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
 
@@ -82,6 +82,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "secretshare-server"
 	app.Usage = "Securely share secrets"
+	app.Version = fmt.Sprintf("%d", Version)
 	app.Action = runServer
 	app.Flags = []cli.Flag{
 		cli.StringFlag{

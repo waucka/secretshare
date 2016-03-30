@@ -5,3 +5,6 @@ test-server.log
 test-client.log
 commonlib/consts.go
 vars.json
+install_linux.sh
+install_osx.sh
+build
