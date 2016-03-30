@@ -30,7 +30,7 @@ build/win-amd64/secretshare-server: server/main.go commonlib/commonlib.go common
 build/win-amd64/secretshare: client/main.go commonlib/commonlib.go commonlib/consts.go commonlib/encrypter.go commonlib/decrypter.go
 	GOOS=windows GOARCH=amd64 go build -o $@ github.com/waucka/secretshare/client
 
-test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/consts.go commonlib/encrypter.go commonlib/decrypter.go secretshare-server secretshare
+test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/consts.go commonlib/encrypter.go commonlib/decrypter.go linux osx windows
 	go test github.com/waucka/secretshare/commonlib
 	./test.sh
 

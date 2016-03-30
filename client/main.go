@@ -44,7 +44,10 @@ type clientConfig struct {
 	Bucket string `json:"bucket"`
 }
 
-var config clientConfig
+var (
+	config clientConfig
+	Version = 1
+)
 
 func loadConfig(configPath string) error {
 	configFile, err := os.Open(configPath)
@@ -352,6 +355,52 @@ func recvSecret(c *cli.Context) {
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
 }
 
+func printVersion(c *cli.Context) {
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
+	config.Bucket = c.Parent().String("bucket")
+	fmt.Printf("Client version: %d\n", Version)
+	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
+
+	resp, err := http.Get(config.EndpointBaseURL + "/version")
+	if err != nil {
+		fmt.Println("Failed to connect to server!")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	if resp.Body == nil {
+		fmt.Println("No data received from server!")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusInternalServerError {
+		fmt.Println("The server encountered a problem, so its version cannot be determined.  Sorry.")
+		os.Exit(1)
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Malformed response received from server!")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	var responseData commonlib.ServerVersionResponse
+	err = json.Unmarshal(bodyBytes, &responseData)
+	if err != nil {
+		fmt.Println("Malformed response received from server!")
+		fmt.Println(err.Error())
+		fmt.Println(string(bodyBytes))
+		os.Exit(1)
+	}
+
+	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
+	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
+
+	if commonlib.APIVersion != responseData.APIVersion {
+		fmt.Println("WARNING! Server and client APIs do not match!  Update your client.")
+		os.Exit(1)
+	}
+}
+
 func main() {
 	err := loadConfig("~/.secretsharerc")
 	if err != nil {
@@ -397,6 +446,11 @@ func main() {
 			Name: "receive",
 			Usage: "Receive a secret file",
 			Action: recvSecret,
+		},
+		{
+			Name: "version",
+			Usage: "Print client and server version",
+			Action: printVersion,
 		},
 	}
 	app.Run(os.Args)

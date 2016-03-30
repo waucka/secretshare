@@ -23,6 +23,7 @@ import (
 )
 
 var (
+	APIVersion = 1
 	DEBUG = false
 	BadBlockSizeError = errors.New("Block size is >256?  WTF?")
 	ShortReadError = errors.New("Read was truncated, but then read more data!  This should never happen!")
@@ -52,6 +53,11 @@ type UploadRequest struct {
 type FileMetadata struct {
 	Filename string `json:"filename"`
 	Filesize int64 `json:"filesize"`
+}
+
+type ServerVersionResponse struct {
+	ServerVersion int `json:"server_version"`
+	APIVersion int `json:"api_version"`
 }
 
 func DEBUGPrintf(format string, args... interface{}) {

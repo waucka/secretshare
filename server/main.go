@@ -43,6 +43,7 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
+	Version = 1
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
 
@@ -124,6 +125,12 @@ func runServer(c *cli.Context) {
 	}
 
 	r := gin.Default()
+	r.GET("/version", func(c *gin.Context) {
+		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
+			ServerVersion: Version,
+			APIVersion: commonlib.APIVersion,
+		})
+	})
 	r.POST("/upload", func(c *gin.Context) {
 		var requestData commonlib.UploadRequest
 		ttl := time.Minute * 60 * 4

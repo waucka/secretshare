@@ -2,5 +2,6 @@
 secretshare
 secretshare-server
 test-server.log
+test-client.log
 commonlib/consts.go
 vars.json
