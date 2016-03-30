@@ -194,6 +194,10 @@ func sendSecret(c *cli.Context) {
 		os.Exit(1)
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusInternalServerError {
+		fmt.Println("The server encountered a problem, so the file cannot be uploaded.  Sorry.")
+		os.Exit(1)
+	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Malformed response received from server!")
