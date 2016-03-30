@@ -21,6 +21,16 @@ Compile, then put secretshare somewhere in your `$PATH`.
 2. Copy secretshare-server.json.example to /etc/secretshare-server.json.
 3. Write an initscript or systemd unit or whatever to launch secretshare-server (preferably as `nobody:nobody` or an equivalently unprivileged user and group).
 
+### AWS Credentials
+
+You will need to run the server as an appropriately privileged user.  See policy_template.json for an AWS policy template for an AWS policy that has the needed privileges.  It should only need PutObject and PutObjectACL, but the others may be needed in the future (especially DeleteObject and ListBucket).
+
+## TODO
+
+- [ ] Allow lifespans other than the default bucket lifespan (requires server support)
+- [ ] Force HTTPS on the client side without interfering with local development
+- [ ] Implement a web interface for CLI-averse users
+
 ## Details of operation
 
 Suppose you run `secretshare send foobar.txt`.  What happens?
