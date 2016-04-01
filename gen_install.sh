@@ -20,6 +20,11 @@ if [ "x$DEPLOY_BUCKET" == "x" ]; then
     exit 1
 fi
 
+if [ "x$GPG_USERID" == "x" ]; then
+    echo 'Set $GPG_USERID to the userid of the GPG key  you want to sign binaries with and re-run.'
+    exit 1
+fi
+
 cat <<EOF
 #!/bin/sh
 
@@ -28,14 +33,34 @@ echo 'I like to run random code from the Internet as root without reading it!  c
 URL="https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET/client/$TARGET_OS-amd64/$LATEST_VERSION/secretshare"
 
 if test -f `which curl`; then
-    sudo curl -o /usr/local/bin/secretshare "\$URL"
+    curl -o /tmp/secretshare "\$URL"
+    curl -o /tmp/secretshare.gpg "\$URL.gpg"
 elif test -f `which wget`; then
-    sudo wget -O /usr/local/bin/secretshare "\$URL"
+    wget -O /tmp/secretshare "\$URL"
+    wget -O /tmp/secretshare.gpg "\$URL.gpg"
 else
     echo 'No curl or wget!  Install one of these first.'
     exit 1
 fi
 
+if which gpg; then
+    if gpg --list-keys | grep '$GPG_USERID'; then
+        if gpg --verify /tmp/secretshare.gpg /tmp/secretshare; then
+            echo 'Download verified!'
+        else
+            echo 'Download verification failed!'
+            exit 1
+        fi
+    else
+        echo "$GPG_USERID key is not present, so the download can't be verified. :("
+    fi
+else
+    echo "GPG is not installed, so the download can't be verified. :("
+fi
+
+sudo cp /tmp/secretshare /usr/local/bin/secretshare
 sudo chmod +x /usr/local/bin/secretshare
+
+echo 'Install complete!'
 
 EOF
