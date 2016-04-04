@@ -13,3 +13,8 @@ var (
 	Bucket = "{Bucket}"
 )
 """.format(**vars_dict))
+
+with open('docker-secretshare-server.json.in', 'r') as f:
+    serverconf_template = f.read()
+with open('docker-secretshare-server.json', 'w') as f:
+    f.write(serverconf_template.format(**vars_dict))

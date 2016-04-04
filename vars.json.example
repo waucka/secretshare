@@ -1,5 +1,6 @@
 {
     "EndpointBaseURL": "http://localhost:8080",
     "BucketRegion": "us-west-1",
-    "Bucket": "secretshare"
+    "Bucket": "secretshare",
+    "SecretKey": "THISISABADKEY"
 }
