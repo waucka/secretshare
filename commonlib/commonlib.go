@@ -48,6 +48,7 @@ type UploadResponse struct {
 
 type UploadRequest struct {
 	TTL int `json:"ttl"`
+	SecretKey string `json:"secret_key"`
 }
 
 type FileMetadata struct {

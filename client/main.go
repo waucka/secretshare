@@ -18,6 +18,7 @@ package main
 
 import (
 	"os"
+	"os/user"
 	"fmt"
 	"bytes"
 	"io"
@@ -46,6 +47,7 @@ type clientConfig struct {
 
 var (
 	config clientConfig
+	secretKey string
 	Version = 1 //deploy.sh:VERSION
 )
 
@@ -69,6 +71,24 @@ func loadConfig(configPath string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func loadSecretKey(keyPath string) error {
+	keyString := os.Getenv("SECRETSHARE_KEY")
+	if keyString != "" {
+		secretKey = keyString
+		return nil
+	}
+	keyfile, err := os.Open(keyPath)
+	if err != nil {
+		return err
+	}
+	keyBytes, err := ioutil.ReadAll(keyfile)
+	if err != nil {
+		return err
+	}
+	secretKey = string(keyBytes)
 	return nil
 }
 
@@ -402,9 +422,22 @@ func printVersion(c *cli.Context) {
 }
 
 func main() {
-	err := loadConfig("~/.secretsharerc")
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Println("Internal error")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	err = loadConfig(filepath.Join(usr.HomeDir, ".secretsharerc"))
 	if err != nil {
 		fmt.Println("Failed to load configuration")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	err = loadSecretKey(filepath.Join(usr.HomeDir,".secretshare.key"))
+	if err != nil {
+		fmt.Println("Failed to load secret key")
+		fmt.Println("($HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set)")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}

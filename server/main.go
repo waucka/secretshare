@@ -50,6 +50,7 @@ var (
 type serverConfig struct {
 	ListenAddr string `json:"addr"`
 	ListenPort int `json:"port"`
+	SecretKey string `json:"secret_key"`
 }
 
 func generateId() (string, error) {
@@ -135,7 +136,22 @@ func runServer(c *cli.Context) {
 	r.POST("/upload", func(c *gin.Context) {
 		var requestData commonlib.UploadRequest
 		ttl := time.Minute * 60 * 4
-		if c.BindJSON(&requestData) == nil {
+		err := c.BindJSON(&requestData)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
+				Message: err.Error(),
+			})
+			log.Print(err.Error())
+			return
+		}
+		if requestData.SecretKey != config.SecretKey {
+			c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
+				Message: "Incorrect secret key",
+			})
+			log.Print(err.Error())
+			return
+		}
+		if requestData.TTL > 0 {
 			ttl = time.Minute * time.Duration(requestData.TTL)
 		}
 
