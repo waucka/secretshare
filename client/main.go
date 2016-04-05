@@ -49,7 +49,7 @@ var (
 	config clientConfig
 	secretKey string
 	currentUser *user.User
-	Version = 2 //deploy.sh:VERSION
+	Version = 3 //deploy.sh:VERSION
 )
 
 func loadConfig(configPath string) error {
