@@ -43,7 +43,7 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
-	Version = 1 //deploy.sh:VERSION
+	Version = 2 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
 
@@ -145,6 +145,7 @@ func runServer(c *cli.Context) {
 			return
 		}
 		if requestData.SecretKey != config.SecretKey {
+			os.Exit(1)
 			c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
 				Message: "Incorrect secret key",
 			})

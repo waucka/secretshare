@@ -35,7 +35,7 @@ client_api_version=$(echo "$version_out" | grep '^Client API version' | cut -d '
 server_version=$(echo "$version_out" | grep '^Server version' | cut -d ':' -f 2 | cut -c 2-)
 server_api_version=$(echo "$version_out" | grep '^Server API version' | cut -d ':' -f 2 | cut -c 2-)
 
-if [ "x$client_version" != "x1" ]; then
+if [ "x$client_version" != "x2" ]; then
     kill $server_pid
     echo "Wrong client version: $client_version"
     echo -e $version_out
@@ -43,7 +43,7 @@ if [ "x$client_version" != "x1" ]; then
     exit 1
 fi
 
-if [ "x$client_api_version" != "x1" ]; then
+if [ "x$client_api_version" != "x2" ]; then
     kill $server_pid
     echo "Wrong client API version: $client_api_version"
     echo -e $version_out
@@ -51,7 +51,7 @@ if [ "x$client_api_version" != "x1" ]; then
     exit 1
 fi
 
-if [ "x$server_version" != "x1" ]; then
+if [ "x$server_version" != "x2" ]; then
     kill $server_pid
     echo "Wrong server version: $server_version"
     echo -e $version_out
@@ -59,7 +59,7 @@ if [ "x$server_version" != "x1" ]; then
     exit 1
 fi
 
-if [ "x$server_api_version" != "x1" ]; then
+if [ "x$server_api_version" != "x2" ]; then
     kill $server_pid
     echo "Wrong server API version: $server_api_version"
     echo -e $version_out
@@ -68,7 +68,14 @@ if [ "x$server_api_version" != "x1" ]; then
 fi
 
 echo -n "This is a test" > test.txt
-id_key=$(./build/$CURRENT_OS-$CURRENT_ARCH/secretshare send test.txt)
+id_key=$($CLIENT send test.txt)
+if [ "x$?" != "x0" ]; then
+    kill $server_pid
+    echo "Upload failed"
+    echo -e $id_key
+    echo "FAIL"
+    exit 1
+fi
 rm test.txt
 echo 'Output from secretshare:' &> test-client.log
 echo "$id_key" > test-client.log

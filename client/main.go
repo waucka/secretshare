@@ -48,7 +48,7 @@ type clientConfig struct {
 var (
 	config clientConfig
 	secretKey string
-	Version = 1 //deploy.sh:VERSION
+	Version = 2 //deploy.sh:VERSION
 )
 
 func loadConfig(configPath string) error {
@@ -88,7 +88,7 @@ func loadSecretKey(keyPath string) error {
 	if err != nil {
 		return err
 	}
-	secretKey = string(keyBytes)
+	secretKey = strings.TrimSpace(string(keyBytes))
 	return nil
 }
 
@@ -182,6 +182,7 @@ func sendSecret(c *cli.Context) {
 	basename := filepath.Base(filename)
 	requestBytes, err := json.Marshal(&commonlib.UploadRequest{
 		TTL: c.Int("ttl"),
+		SecretKey: secretKey,
 	})
 	if err != nil {
 		fmt.Println("Internal error!")
@@ -205,6 +206,7 @@ func sendSecret(c *cli.Context) {
 	}
 	keystr := hex.EncodeToString(key)
 
+	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL + "/upload")
 	resp, err := http.Post(config.EndpointBaseURL + "/upload", "application/json", buf)
 	if err != nil {
 		fmt.Println("Failed to connect to server!")
@@ -219,6 +221,15 @@ func sendSecret(c *cli.Context) {
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
 		fmt.Println("The server encountered a problem, so the file cannot be uploaded.  Sorry.")
+		os.Exit(1)
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		fmt.Println("You are not authorized to upload via this server.  Sorry.")
+		os.Exit(1)
+	}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("An unknown error occurred (HTTP code %d), so the file cannot be uploaded.  Sorry.",
+			resp.StatusCode)
 		os.Exit(1)
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
@@ -434,7 +445,7 @@ func main() {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	err = loadSecretKey(filepath.Join(usr.HomeDir,".secretshare.key"))
+	err = loadSecretKey(filepath.Join(usr.HomeDir, ".secretshare.key"))
 	if err != nil {
 		fmt.Println("Failed to load secret key")
 		fmt.Println("($HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set)")
