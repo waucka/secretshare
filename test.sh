@@ -68,21 +68,32 @@ if [ "x$server_api_version" != "x2" ]; then
 fi
 
 echo -n "This is a test" > test.txt
-id_key=$($CLIENT send test.txt)
+client_out=$($CLIENT send test.txt)
 if [ "x$?" != "x0" ]; then
     kill $server_pid
     echo "Upload failed"
-    echo -e $id_key
+    echo -e $client_out
     echo "FAIL"
     exit 1
 fi
 rm test.txt
 echo 'Output from secretshare:' &> test-client.log
-echo "$id_key" > test-client.log
-id=$(echo "$id_key" | grep '^ID:' | cut -d ' ' -f 2)
-key=$(echo "$id_key" | grep '^Key:' | cut -d ' ' -f 2)
+echo -e "$client_out" > test-client.log
+#id=$(echo "$id_key" | grep '^ID:' | cut -d ' ' -f 2)
+#key=$(echo "$id_key" | grep '^Key:' | cut -d ' ' -f 2)
+id=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 3)
+key=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 4)
 $CLIENT receive "$id" "$key" &> test-client.log
 kill $server_pid
+
+if [ ! -f test.txt ]; then
+    echo "Nothing was received!"
+    echo -e "$client_out"
+    echo "ID: $id"
+    echo "Key: $key"
+    echo "FAIL"
+    exit 1
+fi
 
 contents=$(cat test.txt)
 

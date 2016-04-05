@@ -279,8 +279,10 @@ func sendSecret(c *cli.Context) {
 	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key)
 
 	fmt.Println("File uploaded!")
-	fmt.Printf("Key: %s\nID: %s\nURL: https://s3-%s.amazonaws.com/%s/%s\n",
-		keystr, responseData.Id, config.BucketRegion, config.Bucket, responseData.Id)
+	commonlib.DEBUGPrintf("Key: %s\n", keystr)
+	commonlib.DEBUGPrintf("ID: %s\n", responseData.Id)
+	commonlib.DEBUGPrintf("URL: https://s3-%s.amazonaws.com/%s/%s\n",
+		config.BucketRegion, config.Bucket, responseData.Id)
 	fmt.Println("To receive this secret:")
 	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
 }
