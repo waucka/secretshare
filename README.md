@@ -27,6 +27,22 @@ Compile, then put secretshare somewhere in your `$PATH`.
 
 You will need to run the server as an appropriately privileged user.  See policy_template.json for an AWS policy template for an AWS policy that has the needed privileges.  It should only need PutObject and PutObjectACL, but the others may be needed in the future (especially DeleteObject and ListBucket).
 
+## Usage
+
+### Authentication
+
+    secretshare authenticate YOUR_PRE_SHARED_KEY
+
+### Sending
+
+    $ secretshare send /path/to/file/with/secret/stuff/in/it
+	To receive this secret:
+    secretshare receive 50d505ba8b9fad5f9cf9853f943c81ab0409ebe737c4796e44893fff77909f43 0d5478d6e68fde7bb59ef7b2087da20f8ef0c91ea1d7e9d0110224b91636edfb
+
+### Receiving
+
+    secretshare receive 50d505ba8b9fad5f9cf9853f943c81ab0409ebe737c4796e44893fff77909f43 0d5478d6e68fde7bb59ef7b2087da20f8ef0c91ea1d7e9d0110224b91636edfb
+
 ## TODO
 
 - [ ] Allow lifespans other than the default bucket lifespan (requires server support)
@@ -48,3 +64,7 @@ Now suppose somebody runs `secretshare receive $ID $KEY`, where `$ID` and `$KEY`
 
 1. The secretshare client downloads the metadata bundle from S3 and decrypts it.
 2. The secretshare client downloads the file from S3 and decrypts it, naming it according to the name in the metadata bundle.  If a file with that name already exists, it will prompt the user before overwriting it.  It decrypts the file on-the-fly, so large files can be decrypted without using an inordinate amount of memory.
+
+## Thanks
+
+Many thanks to my employer, [Exosite](https://exosite.com/), which gives its employees the freedom to open-source broadly useful tools like this.
