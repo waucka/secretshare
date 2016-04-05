@@ -32,10 +32,10 @@ echo 'I like to run random code from the Internet as root without reading it!  c
 
 URL="https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET/client/$TARGET_OS-amd64/$LATEST_VERSION/secretshare"
 
-if test -f `which curl`; then
+if test -f \`which curl\`; then
     curl -o /tmp/secretshare "\$URL"
     curl -o /tmp/secretshare.gpg "\$URL.gpg"
-elif test -f `which wget`; then
+elif test -f \`which wget\`; then
     wget -O /tmp/secretshare "\$URL"
     wget -O /tmp/secretshare.gpg "\$URL.gpg"
 else
