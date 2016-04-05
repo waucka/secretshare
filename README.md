@@ -31,7 +31,7 @@ You will need to run the server as an appropriately privileged user.  See policy
 
 ### Authentication
 
-    secretshare authenticate YOUR_PRE_SHARED_KEY
+    $ secretshare authenticate YOUR_PRE_SHARED_KEY
 
 ### Sending
 
@@ -41,7 +41,7 @@ You will need to run the server as an appropriately privileged user.  See policy
 
 ### Receiving
 
-    secretshare receive 50d505ba8b9fad5f9cf9853f943c81ab0409ebe737c4796e44893fff77909f43 0d5478d6e68fde7bb59ef7b2087da20f8ef0c91ea1d7e9d0110224b91636edfb
+    $ secretshare receive 50d505ba8b9fad5f9cf9853f943c81ab0409ebe737c4796e44893fff77909f43 0d5478d6e68fde7bb59ef7b2087da20f8ef0c91ea1d7e9d0110224b91636edfb
 
 ## TODO
 
