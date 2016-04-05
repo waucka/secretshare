@@ -48,6 +48,7 @@ type clientConfig struct {
 var (
 	config clientConfig
 	secretKey string
+	currentUser *user.User
 	Version = 2 //deploy.sh:VERSION
 )
 
@@ -170,6 +171,14 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 }
 
 func sendSecret(c *cli.Context) {
+	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
+	if err != nil {
+		fmt.Println("Failed to load secret key")
+		fmt.Println("($HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set)")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	filename := c.Args()[0]
@@ -386,6 +395,20 @@ func recvSecret(c *cli.Context) {
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
 }
 
+func authenticate(c *cli.Context) {
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
+	config.Bucket = c.Parent().String("bucket")
+	psk := c.Args()[0]
+	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
+	err := ioutil.WriteFile(keyPath, []byte(psk), 0600)
+	if err != nil {
+		fmt.Println("Failed to save authentication credentials!")
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+}
+
 func printVersion(c *cli.Context) {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
@@ -433,22 +456,16 @@ func printVersion(c *cli.Context) {
 }
 
 func main() {
-	usr, err := user.Current()
+	var err error
+	currentUser, err = user.Current()
 	if err != nil {
 		fmt.Println("Internal error")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	err = loadConfig(filepath.Join(usr.HomeDir, ".secretsharerc"))
+	err = loadConfig(filepath.Join(currentUser.HomeDir, ".secretsharerc"))
 	if err != nil {
 		fmt.Println("Failed to load configuration")
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	err = loadSecretKey(filepath.Join(usr.HomeDir, ".secretshare.key"))
-	if err != nil {
-		fmt.Println("Failed to load secret key")
-		fmt.Println("($HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set)")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
@@ -496,6 +513,11 @@ func main() {
 			Name: "version",
 			Usage: "Print client and server version",
 			Action: printVersion,
+		},
+		{
+			Name: "authenticate",
+			Usage: "Save authentication credentials for later use",
+			Action: authenticate,
 		},
 	}
 	app.Run(os.Args)
