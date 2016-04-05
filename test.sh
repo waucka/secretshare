@@ -35,7 +35,7 @@ client_api_version=$(echo "$version_out" | grep '^Client API version' | cut -d '
 server_version=$(echo "$version_out" | grep '^Server version' | cut -d ':' -f 2 | cut -c 2-)
 server_api_version=$(echo "$version_out" | grep '^Server API version' | cut -d ':' -f 2 | cut -c 2-)
 
-if [ "x$client_version" != "x2" ]; then
+if [ "x$client_version" != "x3" ]; then
     kill $server_pid
     echo "Wrong client version: $client_version"
     echo -e $version_out
@@ -79,8 +79,6 @@ fi
 rm test.txt
 echo 'Output from secretshare:' &> test-client.log
 echo -e "$client_out" > test-client.log
-#id=$(echo "$id_key" | grep '^ID:' | cut -d ' ' -f 2)
-#key=$(echo "$id_key" | grep '^Key:' | cut -d ' ' -f 2)
 id=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 3)
 key=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 4)
 $CLIENT receive "$id" "$key" &> test-client.log
