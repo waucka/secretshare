@@ -48,6 +48,7 @@ You will need to run the server as an appropriately privileged user.  See policy
 - [ ] Allow lifespans other than the default bucket lifespan (requires server support)
 - [ ] Force HTTPS on the client side without interfering with local development
 - [ ] Implement a web interface for CLI-averse users
+- [ ] Better error handling (e.g. wrong number of arguments)
 
 ## Details of operation
 
