@@ -95,7 +95,7 @@ func main() {
 	app.Run(os.Args)
 }
 
-func runServer(c *cli.Context) {
+func runServer(c *cli.Context) error {
 	sess := session.New(&aws.Config{
 		Region: aws.String("us-west-1"),
 		Credentials: credentials.NewSharedCredentials("", "default"),
@@ -194,4 +194,5 @@ func runServer(c *cli.Context) {
 
 	log.Printf("Listening on %s:%d\n", config.ListenAddr, config.ListenPort)
 	r.Run(fmt.Sprintf("%s:%d", config.ListenAddr, config.ListenPort))
+	return nil
 }
