@@ -170,7 +170,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	}
 }
 
-func sendSecret(c *cli.Context) {
+func sendSecret(c *cli.Context) error {
 	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
 	if err != nil {
 		fmt.Println("Failed to load secret key")
@@ -285,6 +285,7 @@ func sendSecret(c *cli.Context) {
 		config.BucketRegion, config.Bucket, responseData.Id)
 	fmt.Println("To receive this secret:")
 	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
+	return nil
 }
 
 func decrypt(ciphertext, key []byte) []byte {
@@ -314,7 +315,7 @@ func decrypt(ciphertext, key []byte) []byte {
 	return raw[:len(raw) - int(paddingLen)]
 }
 
-func recvSecret(c *cli.Context) {
+func recvSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
@@ -395,9 +396,10 @@ func recvSecret(c *cli.Context) {
 		os.Exit(1)
 	}
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
+	return nil
 }
 
-func authenticate(c *cli.Context) {
+func authenticate(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	psk := c.Args()[0]
@@ -409,9 +411,10 @@ func authenticate(c *cli.Context) {
 		os.Exit(1)
 	}
 	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	return nil
 }
 
-func printVersion(c *cli.Context) {
+func printVersion(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
@@ -455,6 +458,7 @@ func printVersion(c *cli.Context) {
 		fmt.Println("WARNING! Server and client APIs do not match!  Update your client.")
 		os.Exit(1)
 	}
+	return nil
 }
 
 func main() {
