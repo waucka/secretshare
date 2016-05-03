@@ -17,39 +17,39 @@ package main
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import (
-	"os"
-	"os/user"
-	"fmt"
+	"bufio"
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"bufio"
 	"net/http"
+	"os"
+	"os/user"
 	//"net/http/httputil"
 	"encoding/json"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"crypto/aes"
-	"crypto/rand"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/hex"
 
-	"github.com/waucka/secretshare/commonlib"
 	"github.com/codegangsta/cli"
+	"github.com/waucka/secretshare/commonlib"
 )
 
 type clientConfig struct {
 	EndpointBaseURL string `json:"endpointBaseUrl"`
-	BucketRegion string `json:"bucket_region"`
-	Bucket string `json:"bucket"`
+	BucketRegion    string `json:"bucket_region"`
+	Bucket          string `json:"bucket"`
 }
 
 var (
-	config clientConfig
-	secretKey string
+	config      clientConfig
+	secretKey   string
 	currentUser *user.User
-	Version = 3 //deploy.sh:VERSION
+	Version     = 3 //deploy.sh:VERSION
 )
 
 func loadConfig(configPath string) error {
@@ -95,7 +95,7 @@ func loadSecretKey(keyPath string) error {
 
 func cleanUrl(url string) string {
 	if strings.HasSuffix(url, "/") {
-		return url[:len(url) - 1]
+		return url[:len(url)-1]
 	}
 	return url
 }
@@ -190,7 +190,7 @@ func sendSecret(c *cli.Context) {
 	fileSize := stats.Size()
 	basename := filepath.Base(filename)
 	requestBytes, err := json.Marshal(&commonlib.UploadRequest{
-		TTL: c.Int("ttl"),
+		TTL:       c.Int("ttl"),
 		SecretKey: secretKey,
 	})
 	if err != nil {
@@ -215,8 +215,8 @@ func sendSecret(c *cli.Context) {
 	}
 	keystr := hex.EncodeToString(key)
 
-	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL + "/upload")
-	resp, err := http.Post(config.EndpointBaseURL + "/upload", "application/json", buf)
+	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/upload")
+	resp, err := http.Post(config.EndpointBaseURL+"/upload", "application/json", buf)
 	if err != nil {
 		fmt.Println("Failed to connect to server!")
 		fmt.Println(err.Error())
@@ -291,11 +291,11 @@ func decrypt(ciphertext, key []byte) []byte {
 	paddingLen := ciphertext[0]
 	commonlib.DEBUGPrintf("decrypt: paddingLen = %d\n", paddingLen)
 	commonlib.DEBUGPrintf("decrypt: len(ciphertext) = %d\n", len(ciphertext))
-	iv := ciphertext[1:aes.BlockSize + 1]
-	raw := ciphertext[1 + aes.BlockSize:len(ciphertext)]
+	iv := ciphertext[1 : aes.BlockSize+1]
+	raw := ciphertext[1+aes.BlockSize : len(ciphertext)]
 	commonlib.DEBUGPrintf("decrypt: len(raw) = %d\n", len(raw))
 
-	if len(raw) % aes.BlockSize != 0 {
+	if len(raw)%aes.BlockSize != 0 {
 		fmt.Println("Data is malformed!")
 		fmt.Printf("Detail: length is %d, which is not a multiple of %d\n", len(raw), aes.BlockSize)
 		os.Exit(1)
@@ -311,7 +311,7 @@ func decrypt(ciphertext, key []byte) []byte {
 	decrypter := cipher.NewCBCDecrypter(block, iv)
 	decrypter.CryptBlocks(raw, raw)
 	// Discard padding
-	return raw[:len(raw) - int(paddingLen)]
+	return raw[:len(raw)-int(paddingLen)]
 }
 
 func recvSecret(c *cli.Context) {
@@ -478,47 +478,47 @@ func main() {
 	app.Version = fmt.Sprintf("%d", Version)
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "endpoint",
+			Name:  "endpoint",
 			Value: config.EndpointBaseURL,
 			Usage: "API endpoint to connect to when requesting IDs",
 		},
 		cli.StringFlag{
-			Name: "bucket-region",
+			Name:  "bucket-region",
 			Value: config.BucketRegion,
 			Usage: "Region for S3 bucket to store files in",
 		},
 		cli.StringFlag{
-			Name: "bucket",
+			Name:  "bucket",
 			Value: config.Bucket,
 			Usage: "S3 bucket to store files in",
 		},
 	}
 	app.Commands = []cli.Command{
 		{
-			Name: "send",
-			Usage: "Send a secret file",
+			Name:   "send",
+			Usage:  "Send a secret file",
 			Action: sendSecret,
 			Flags: []cli.Flag{
 				cli.IntFlag{
-					Name: "ttl",
+					Name:  "ttl",
 					Value: 4 * 60,
 					Usage: "Time in minutes that the file should be available (doesn't work yet)",
 				},
 			},
 		},
 		{
-			Name: "receive",
-			Usage: "Receive a secret file",
+			Name:   "receive",
+			Usage:  "Receive a secret file",
 			Action: recvSecret,
 		},
 		{
-			Name: "version",
-			Usage: "Print client and server version",
+			Name:   "version",
+			Usage:  "Print client and server version",
 			Action: printVersion,
 		},
 		{
-			Name: "authenticate",
-			Usage: "Save authentication credentials for later use",
+			Name:   "authenticate",
+			Usage:  "Save authentication credentials for later use",
 			Action: authenticate,
 		},
 	}

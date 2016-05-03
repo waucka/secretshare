@@ -17,14 +17,14 @@ package commonlib
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import (
-	. "gopkg.in/check.v1"
-	"testing"
-	"crypto/rand"
-	"crypto/aes"
-	"bytes"
-	"io/ioutil"
-	"fmt"
 	"bufio"
+	"bytes"
+	"crypto/aes"
+	"crypto/rand"
+	"fmt"
+	. "gopkg.in/check.v1"
+	"io/ioutil"
+	"testing"
 )
 
 func Test(t *testing.T) { TestingT(t) }
@@ -77,28 +77,28 @@ func checkBufRoundTrip(c *C, size int64, bufsize int) {
 
 func (s *CryptSuite) TestEncryptDecrypt(c *C) {
 	fmt.Println("Testing with data size aes.BlockSize - 1")
-	checkRoundTrip(c, aes.BlockSize - 1)
+	checkRoundTrip(c, aes.BlockSize-1)
 	fmt.Println("Testing with data size 100 * aes.BlockSize - 1")
-	checkRoundTrip(c, 100 * aes.BlockSize - 1)
+	checkRoundTrip(c, 100*aes.BlockSize-1)
 	fmt.Println("Testing with data size aes.BlockSize + 1")
-	checkRoundTrip(c, aes.BlockSize + 1)
+	checkRoundTrip(c, aes.BlockSize+1)
 	fmt.Println("Testing with data size 100 * aes.BlockSize + 1")
-	checkRoundTrip(c, 100 * aes.BlockSize + 1)
+	checkRoundTrip(c, 100*aes.BlockSize+1)
 	fmt.Println("Testing with data size aes.BlockSize")
 	checkRoundTrip(c, aes.BlockSize)
 	fmt.Println("Testing with data size 100 * aes.BlockSize")
-	checkRoundTrip(c, 100 * aes.BlockSize)
+	checkRoundTrip(c, 100*aes.BlockSize)
 
 	fmt.Println("Testing with data size aes.BlockSize - 1, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, aes.BlockSize - 1, aes.BlockSize * 4)
+	checkBufRoundTrip(c, aes.BlockSize-1, aes.BlockSize*4)
 	fmt.Println("Testing with data size 100 * aes.BlockSize - 1, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, 100 * aes.BlockSize - 1, aes.BlockSize * 4)
+	checkBufRoundTrip(c, 100*aes.BlockSize-1, aes.BlockSize*4)
 	fmt.Println("Testing with data size aes.BlockSize + 1, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, aes.BlockSize + 1, aes.BlockSize * 4)
+	checkBufRoundTrip(c, aes.BlockSize+1, aes.BlockSize*4)
 	fmt.Println("Testing with data size 100 * aes.BlockSize + 1, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, 100 * aes.BlockSize + 1, aes.BlockSize * 4)
+	checkBufRoundTrip(c, 100*aes.BlockSize+1, aes.BlockSize*4)
 	fmt.Println("Testing with data size aes.BlockSize, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, aes.BlockSize, aes.BlockSize * 4)
+	checkBufRoundTrip(c, aes.BlockSize, aes.BlockSize*4)
 	fmt.Println("Testing with data size 100 * aes.BlockSize, buffer size aes.BlockSize * 4")
-	checkBufRoundTrip(c, 100 * aes.BlockSize, aes.BlockSize * 4)
+	checkBufRoundTrip(c, 100*aes.BlockSize, aes.BlockSize*4)
 }
