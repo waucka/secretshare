@@ -145,11 +145,10 @@ func runServer(c *cli.Context) {
 			return
 		}
 		if requestData.SecretKey != config.SecretKey {
-			os.Exit(1)
 			c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
 				Message: "Incorrect secret key",
 			})
-			log.Print(err.Error())
+			log.Print("401: client provided incorrect secret key")
 			return
 		}
 		if requestData.TTL > 0 {
