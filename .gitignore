@@ -1,4 +1,6 @@
 *~
+.*.sw?
+.sw?
 test-server.log
 test-client.log
 commonlib/consts.go
@@ -8,3 +10,4 @@ install_osx.sh
 build
 aws_creds
 docker-secretshare-server.json
+test.txt
