@@ -17,40 +17,40 @@ package main
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import (
-	"encoding/hex"
 	"crypto/rand"
-	"time"
-	"log"
-	"fmt"
-	"os"
-	"io/ioutil"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"net/http"
+	"fmt"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/waucka/secretshare/commonlib"
 	"github.com/codegangsta/cli"
+	"github.com/waucka/secretshare/commonlib"
 )
 
 var (
-	ErrIDGen = errors.New("Failed to generate random ID!")
+	ErrIDGen   = errors.New("Failed to generate random ID!")
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
-	Version = 2 //deploy.sh:VERSION
+	Version           = 2 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
 
 type serverConfig struct {
 	ListenAddr string `json:"addr"`
-	ListenPort int `json:"port"`
-	SecretKey string `json:"secret_key"`
+	ListenPort int    `json:"port"`
+	SecretKey  string `json:"secret_key"`
 }
 
 func generateId() (string, error) {
@@ -69,10 +69,10 @@ func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string
 	s3key := prefix + id
 
 	putObjectInput := &s3.PutObjectInput{
-		Bucket: &commonlib.Bucket,
-		Key: &s3key,
-		Expires: aws.Time(time.Now().Add(ttl)),
-		ACL: aws.String("public-read"),
+		Bucket:      &commonlib.Bucket,
+		Key:         &s3key,
+		Expires:     aws.Time(time.Now().Add(ttl)),
+		ACL:         aws.String("public-read"),
 		ContentType: aws.String("application/octet-stream"),
 	}
 	req, _ := svc.PutObjectRequest(putObjectInput)
@@ -87,7 +87,7 @@ func main() {
 	app.Action = runServer
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name: "config",
+			Name:  "config",
 			Value: "/etc/secretshare-server.json",
 			Usage: "Server configuration file",
 		},
@@ -97,7 +97,7 @@ func main() {
 
 func runServer(c *cli.Context) {
 	sess := session.New(&aws.Config{
-		Region: aws.String("us-west-1"),
+		Region:      aws.String("us-west-1"),
 		Credentials: credentials.NewSharedCredentials("", "default"),
 	})
 	svc := s3.New(sess)
@@ -130,7 +130,7 @@ func runServer(c *cli.Context) {
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
 			ServerVersion: Version,
-			APIVersion: commonlib.APIVersion,
+			APIVersion:    commonlib.APIVersion,
 		})
 	})
 	r.POST("/upload", func(c *gin.Context) {
@@ -184,10 +184,10 @@ func runServer(c *cli.Context) {
 		}
 
 		c.JSON(http.StatusOK, &commonlib.UploadResponse{
-			Id: id,
-			PutURL: putURL,
-			MetaPutURL: metaPutURL,
-			Headers: headers,
+			Id:          id,
+			PutURL:      putURL,
+			MetaPutURL:  metaPutURL,
+			Headers:     headers,
 			MetaHeaders: metaHeaders,
 		})
 	})

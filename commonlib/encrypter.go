@@ -21,21 +21,21 @@ import (
 	"io"
 
 	"crypto/aes"
-	"crypto/rand"
 	"crypto/cipher"
+	"crypto/rand"
 )
 
 type Encrypter struct {
-	stream io.Reader
-	key []byte
-	cbc cipher.BlockMode
-	headerWritten bool
-	headerData []byte
+	stream           io.Reader
+	key              []byte
+	cbc              cipher.BlockMode
+	headerWritten    bool
+	headerData       []byte
 	paddingRemaining byte
-	paddingLen byte
-	nextBlock []byte
-	blockPos int
-	TotalSize int64
+	paddingLen       byte
+	nextBlock        []byte
+	blockPos         int
+	TotalSize        int64
 }
 
 func NewEncrypter(stream io.Reader, messageSize int64, key []byte) (*Encrypter, error) {
@@ -49,7 +49,7 @@ func NewEncrypter(stream io.Reader, messageSize int64, key []byte) (*Encrypter, 
 		return nil, BadBlockSizeError
 	}
 
-	headerData := make([]byte, 1 + aes.BlockSize)
+	headerData := make([]byte, 1+aes.BlockSize)
 	headerData[0] = byte(paddingLen)
 	num_rand_bytes, err := rand.Read(headerData[1:])
 	if err != nil {
@@ -68,16 +68,16 @@ func NewEncrypter(stream io.Reader, messageSize int64, key []byte) (*Encrypter, 
 	cbc := cipher.NewCBCEncrypter(block, iv)
 
 	return &Encrypter{
-		stream: stream,
-		key: key,
-		cbc: cbc,
-		headerWritten: false,
-		headerData: headerData,
+		stream:           stream,
+		key:              key,
+		cbc:              cbc,
+		headerWritten:    false,
+		headerData:       headerData,
 		paddingRemaining: byte(paddingLen),
-		paddingLen: byte(paddingLen),
-		nextBlock: nil,
-		blockPos: 0,
-		TotalSize: messageSize + int64(len(headerData)) + int64(paddingLen),
+		paddingLen:       byte(paddingLen),
+		nextBlock:        nil,
+		blockPos:         0,
+		TotalSize:        messageSize + int64(len(headerData)) + int64(paddingLen),
 	}, nil
 }
 
@@ -108,7 +108,7 @@ func (self *Encrypter) readBlock() error {
 				DEBUGPrintln("Encrypter: readblock: EOF!")
 				return io.EOF
 			}
-			DEBUGPrintf("Encrypter: Writing %d bytes of padding...\n", len(self.nextBlock) - totalBytesRead)
+			DEBUGPrintf("Encrypter: Writing %d bytes of padding...\n", len(self.nextBlock)-totalBytesRead)
 			DEBUGPrintf("Encrypter: Block length: %d\nBytes read: %d\n", len(self.nextBlock), totalBytesRead)
 			if totalBytesRead == 0 {
 				panic(fmt.Errorf("Internal error: empty encryption block!"))

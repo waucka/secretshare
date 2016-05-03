@@ -24,15 +24,15 @@ import (
 )
 
 type Decrypter struct {
-	stream io.Reader
-	key []byte
-	cbc cipher.BlockMode
+	stream           io.Reader
+	key              []byte
+	cbc              cipher.BlockMode
 	paddingRemaining byte
-	paddingLen byte
-	nextBlock []byte
-	blockPos int
-	messageSize int64
-	totalRead int64
+	paddingLen       byte
+	nextBlock        []byte
+	blockPos         int
+	messageSize      int64
+	totalRead        int64
 }
 
 func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, error) {
@@ -46,9 +46,9 @@ func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, 
 		return nil, BadBlockSizeError
 	}
 
-	headerData := make([]byte, 1 + aes.BlockSize)
+	headerData := make([]byte, 1+aes.BlockSize)
 	bytesRead, err := stream.Read(headerData)
-	if bytesRead < 1 + aes.BlockSize {
+	if bytesRead < 1+aes.BlockSize {
 		return nil, io.ErrUnexpectedEOF
 	}
 	if headerData[0] != byte(paddingLen) {
@@ -64,15 +64,15 @@ func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, 
 	cbc := cipher.NewCBCDecrypter(block, iv)
 
 	decrypter := &Decrypter{
-		stream: stream,
-		key: key,
-		cbc: cbc,
+		stream:           stream,
+		key:              key,
+		cbc:              cbc,
 		paddingRemaining: byte(paddingLen),
-		paddingLen: byte(paddingLen),
-		nextBlock: nil,
-		blockPos: 0,
-		messageSize: messageSize,
-		totalRead: 0,
+		paddingLen:       byte(paddingLen),
+		nextBlock:        nil,
+		blockPos:         0,
+		messageSize:      messageSize,
+		totalRead:        0,
 	}
 	err = decrypter.readBlock()
 	if err != nil && err != io.EOF {
