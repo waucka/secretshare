@@ -11,3 +11,4 @@ build
 aws_creds
 docker-secretshare-server.json
 test.txt
+test_env
