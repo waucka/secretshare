@@ -239,6 +239,18 @@ function create_or_pick_iam_user() {
 	echo "$(create_iam_user "${aws_profile}" "${bucket}")"
 }
 
+function pick_os() {
+	if [ "$(uname -s)" == "Darwin" ]; then
+		echo "osx"
+		return
+	fi
+	echo "linux"
+}
+
+function pick_arch() {
+	go version | cut -d/ -f2
+}
+
 if ! [ -d "${GOPATH}/src" ]; then
 	echo "You must export \$GOPATH before running this script, and it must point to"
 	echo "an existing go directory tree."
@@ -298,6 +310,20 @@ sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secr
 
 step=$((step+1))
 echo
+echo "${step} Populate test_env"
+echo
+current_os=$(pick_os)
+current_arch=$(pick_arch)
+cat >test_env <<EOF
+export CURRENT_OS=${current_os}
+export CURRENT_ARCH=${current_arch}
+export TEST_BUCKET_REGION=${region}
+export TEST_BUCKET=${bucket}
+EOF
+
+
+step=$((step+1))
+echo
 echo "${step} Set up AWS credentials for secretshare user"
 echo
 secretshare_creds=$(create_or_pick_iam_user "${profile}" "${bucket}")
@@ -334,4 +360,4 @@ echo "And when you're done:"
 echo
 echo "./credmgr off"
 echo
-echo "Go ahead. Try \"./credmgr on && make test\"."
+echo "Go ahead. Try \"./credmgr on && source test_env && make test\"."

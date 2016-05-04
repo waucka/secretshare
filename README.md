@@ -8,7 +8,7 @@ You will need Go (probably at least 1.5?), Python 2, and make.  Don't forget to 
 
 1. Run `./setup_dev.sh`.This sets up your config files and environment for building (or developing) secretshare.
 2. Run `make`, and it should build secretshare and secretshare-server.  You can also run `make linux`, `make osx`, or `make windows` to only build binaries for the platform of your choice.  Binaries will be in `build/$OS-$ARCH/`.  `$ARCH` can only be `amd64` right now.
-3. Run `make test` to run tests.  First you need to run `go get gopkg.in/check.v1`. You will also need to set `$TEST_BUCKET_REGION`, `$TEST_BUCKET`, `$CURRENT_OS`, and `$CURRENT_ARCH` appropriately in order for the integration tests to run.  `go test github.com/waucka/secretshare/commonlib` will run the unit tests for encryption and decryption.
+3. To run tests, first you need to run `go get gopkg.in/check.v1`. And then run `credmgr on`. And then run `source test_env`. And then run `make test`. `go test github.com/waucka/secretshare/commonlib` will run the unit tests for encryption and decryption.
 
 ## Installation
 
