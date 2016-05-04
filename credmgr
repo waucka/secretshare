@@ -28,6 +28,6 @@ else
 	echo
 	echo "This script manages the AWS credentials file ~/.aws/credentials. \"credmgr on\""
 	echo "places your secretshare server credentials in the credentials file. \"credmgr"
-	echo "off\" sets the credentials back to what the were before."
+	echo "off\" sets the credentials back to what they were before."
 	exit 1
 fi
