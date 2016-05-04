@@ -97,7 +97,7 @@ func main() {
 
 func runServer(c *cli.Context) {
 	sess := session.New(&aws.Config{
-		Region:      aws.String("us-west-1"),
+		Region:      aws.String(commonlib.BucketRegion),
 		Credentials: credentials.NewSharedCredentials("", "default"),
 	})
 	svc := s3.New(sess)
