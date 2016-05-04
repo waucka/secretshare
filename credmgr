@@ -1,0 +1,33 @@
+#!/bin/bash
+
+function credmgr_on() {
+	if ! [ -e "${HOME}/.aws/credentials.normal" ]; then
+		if [ -e "${HOME}/.aws/credentials" ]; then
+			cp "${HOME}/.aws/credentials" "${HOME}/.aws/credentials.normal"
+		else
+			touch "${HOME}/.aws/credentials.normal"
+		fi
+	fi
+	cp "${HOME}/.aws/credentials.secretshare" "${HOME}/.aws/credentials"
+}
+
+function credmgr_off() {
+	if [ "$(wc -l "${HOME}/.aws/credentials.normal" | awk '{print $1}')" -eq 0 ]; then
+		rm -f "${HOME}/.aws/credentials"
+	else
+		cp "${HOME}/.aws/credentials.normal" "${HOME}/.aws/credentials"
+	fi
+}
+
+if [ "${1}" == "on" ]; then
+	credmgr_on
+elif [ "${1}" == "off" ]; then
+	credmgr_off
+else
+	echo "USAGE: credmgr (on|off)"
+	echo
+	echo "This script manages the AWS credentials file ~/.aws/credentials. \"credmgr on\""
+	echo "places your secretshare server credentials in the credentials file. \"credmgr"
+	echo "off\" sets the credentials back to what the were before."
+	exit 1
+fi
