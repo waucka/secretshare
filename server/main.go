@@ -18,7 +18,7 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,6 +43,12 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
+	// We use a custom base-64 encoding because:
+	//
+	//   * '/' and '=' tend to introduce line breaks or breaks in text selection
+	//   * '/' is the path separator in S3
+	Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789+_").WithPadding(base64.NoPadding)
+
 	Version           = 2 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
@@ -62,7 +68,7 @@ func generateId() (string, error) {
 	if num_id_bytes < 32 {
 		return "", ErrIDShort
 	}
-	return hex.EncodeToString(idbin), nil
+	return Encoding.EncodeToString(idbin), nil
 }
 
 func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string, http.Header, error) {
