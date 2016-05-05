@@ -19,14 +19,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/user"
 	//"net/http/httputil"
-	"encoding/json"
 	"path/filepath"
 	"strings"
 
@@ -144,14 +145,14 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	req.ContentLength = encrypter.TotalSize
 	commonlib.DEBUGPrintln("Content-Length set!")
 
-	/*dump, err := httputil.DumpRequestOut(req, false)
+	/*//@DEBUG
+	dump, err := httputil.DumpRequestOut(req, false)
 	if err == nil {
-		fmt.Println("Request:")
-		fmt.Printf("%q", dump)
-		fmt.Println()
+		commonlib.DEBUGPrintf("Request:\n")
+		commonlib.DEBUGPrintf("%q\n\n", dump)
 	} else {
-		fmt.Println("Error dumping request!")
-		fmt.Println(err.Error())
+		commonlib.DEBUGPrintf("Error dumping request!\n")
+		commonlib.DEBUGPrintf("%s\n", err.Error())
 		os.Exit(1)
 	}*/
 
@@ -270,6 +271,9 @@ func sendSecret(c *cli.Context) {
 		Filesize: fileSize,
 	}
 	metabytes, err := json.Marshal(filemeta)
+	//@DEBUG
+	commonlib.DEBUGPrintf("metabytes: %s\n", metabytes)
+
 	if err != nil {
 		fmt.Println("Internal error!")
 		fmt.Println(err.Error())
@@ -327,7 +331,11 @@ func recvSecret(c *cli.Context) {
 	}
 
 	// Download metadata
-	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s", config.BucketRegion, config.Bucket, id))
+	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s",
+		url.QueryEscape(config.BucketRegion),
+		url.QueryEscape(config.Bucket),
+		url.QueryEscape(id),
+	))
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
@@ -335,6 +343,7 @@ func recvSecret(c *cli.Context) {
 	}
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
+	fmt.Printf("x-golf %s\n", id)
 	if err != nil {
 		fmt.Println("Failed to download metadata!")
 		fmt.Println(err.Error())
@@ -374,7 +383,12 @@ func recvSecret(c *cli.Context) {
 	defer outf.Close()
 
 	// Download data
-	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s", config.BucketRegion, config.Bucket, id))
+	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s",
+		url.QueryEscape(config.BucketRegion),
+		url.QueryEscape(config.Bucket),
+		url.QueryEscape(id),
+	))
+
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
