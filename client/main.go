@@ -392,21 +392,20 @@ func recvSecret(c *cli.Context) error {
 	return nil
 }
 
-func authenticate(c *cli.Context) {
+func authenticate(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	psk := c.Args()[0]
 	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
 	err := ioutil.WriteFile(keyPath, []byte(psk), 0600)
 	if err != nil {
-		fmt.Println("Failed to save authentication credentials!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to save authentication credentials: %s", err.Error())
 	}
 	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	return nil
 }
 
-func printVersion(c *cli.Context) {
+func printVersion(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
@@ -414,42 +413,36 @@ func printVersion(c *cli.Context) {
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
-		fmt.Println("Failed to connect to server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
 	if resp.Body == nil {
-		fmt.Println("No data received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("No data received from secretshare server")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		fmt.Println("The server encountered a problem, so its version cannot be determined.  Sorry.")
-		os.Exit(1)
+		return e("The secretshare server encountered an internal error")
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Error reading secretshare server response: %s", err.Error())
 	}
 	var responseData commonlib.ServerVersionResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		fmt.Println(string(bodyBytes))
-		os.Exit(1)
+		return e(`Malformed response received from secretshare server: %s\n
+
+Response body:
+
+%s`, err.Error(), bodyBytes)
 	}
 
 	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
 	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
 
 	if commonlib.APIVersion != responseData.APIVersion {
-		fmt.Println("WARNING! Server and client APIs do not match!  Update your client.")
-		os.Exit(1)
+		return e("WARNING! Server and client APIs do not match!  Update your client.")
 	}
+	return nil
 }
 
 func main() {
