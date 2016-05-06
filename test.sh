@@ -1,5 +1,13 @@
 #!/bin/bash
 
+function get_key_from_vars() {
+	grep SecretKey vars.json | cut -d\" -f4
+	if [ "${?}" -ne 0 ]; then
+		echo >&2 "Failed to pull SecretKey out of vars.json"
+		exit 1
+	fi
+}
+
 if [ "x$TEST_BUCKET_REGION" == "x" ]; then
     echo 'Set $TEST_BUCKET_REGION to the region of the S3 bucket you will use for this test and re-run.'
     exit 1
@@ -20,6 +28,7 @@ if [ "x$CURRENT_ARCH" == "x" ]; then
     exit 1
 fi
 
+killall secretshare-server
 ./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config test-server.json &> test-server.log &
 server_pid=$!
 
@@ -27,7 +36,7 @@ sleep 2
 
 CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:8080 --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
 
-export SECRETSHARE_KEY="THISISABADKEY"
+export SECRETSHARE_KEY=$(get_key_from_vars)
 
 version_out=$($CLIENT version)
 client_version=$(echo "$version_out" | grep '^Client version' | cut -d ':' -f 2 | cut -c 2-)

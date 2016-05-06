@@ -302,10 +302,11 @@ bucket=$(create_or_pick_bucket "${profile}")
 
 step=$((step+1))
 echo
-echo "${step} Populate vars.json"
+echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
 sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
+sed -e "s/THISISABADKEY/${secretshare_key}/" test-server.json.example > test-server.json
 
 
 step=$((step+1))
