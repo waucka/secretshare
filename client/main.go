@@ -315,16 +315,14 @@ func decrypt(ciphertext, key []byte) []byte {
 	return raw[:len(raw)-int(paddingLen)]
 }
 
-func recvSecret(c *cli.Context) {
+func recvSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
 	keystr := c.Args()[1]
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
-		fmt.Println("Malformed key!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Invalid secret key given on command line: %s", err.Error())
 	}
 
 	// Download metadata
@@ -334,26 +332,19 @@ func recvSecret(c *cli.Context) {
 		url.QueryEscape(id),
 	))
 	if err != nil {
-		fmt.Println("Failed to download file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to download metadata file from S3: %s", err.Error())
 	}
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("x-golf %s\n", id)
 	if err != nil {
-		fmt.Println("Failed to download metadata!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to read metadata from S3: %s", err.Error())
 	}
 	realMeta := decrypt(metabytes, key)
 
 	var filemeta commonlib.FileMetadata
 	err = json.Unmarshal(realMeta, &filemeta)
 	if err != nil {
-		fmt.Println("Malformed metadata!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Received malformed metadata from S3: %s", err.Error())
 	}
 
 	// This is how you check if a file exists in Go.  Yep.
@@ -362,20 +353,18 @@ func recvSecret(c *cli.Context) {
 		fmt.Printf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
 		answer, err := inreader.ReadString('\n')
 		if err != nil {
-			os.Exit(1)
+			return e("Error reading user input: %s", err.Error())
 		}
 
 		if answer == "y\n" || answer == "Y\n" {
 			os.Remove(filemeta.Filename)
 		} else {
-			fmt.Printf("Download cancelled.\n")
-			os.Exit(1)
+			return e("Download aborted at user request")
 		}
 	}
 	outf, err := os.Create(filemeta.Filename)
 	if err != nil {
-		fmt.Printf("Can't create file %s: %s\n", filemeta.Filename, err.Error())
-		os.Exit(1)
+		return e("Failed to create file %s: %s\n", filemeta.Filename, err.Error())
 	}
 	defer outf.Close()
 
@@ -387,25 +376,20 @@ func recvSecret(c *cli.Context) {
 	))
 
 	if err != nil {
-		fmt.Println("Failed to download file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to download file from S3: %s", err.Error())
 	}
 	defer resp.Body.Close()
 	decrypter, err := commonlib.NewDecrypter(resp.Body, filemeta.Filesize, key)
 	if err != nil {
-		fmt.Println("Failed to set up decryption!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to initiate decryption: %s", err.Error())
 	}
 	bytesWritten, err := io.Copy(outf, decrypter)
 	commonlib.DEBUGPrintf("Wrote %d bytes\n", bytesWritten)
 	if err != nil {
-		fmt.Println("Failed to save file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to save decrypted file: %s", err.Error())
 	}
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
+	return nil
 }
 
 func authenticate(c *cli.Context) {
