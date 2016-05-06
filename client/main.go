@@ -344,7 +344,6 @@ func recvSecret(c *cli.Context) {
 	}
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("x-golf %s\n", id)
 	if err != nil {
 		fmt.Println("Failed to download metadata!")
 		fmt.Println(err.Error())
