@@ -17,6 +17,7 @@ package commonlib
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -32,6 +33,12 @@ var (
 	DataCorruptionError         = errors.New("Encrypted data is corrupt!")
 	EncrypterWeirdEOFError      = errors.New("Encrypter: Read 0 bytes with no EOF!")
 	DecrypterWeirdEOFError      = errors.New("Decrypter: Read 0 bytes with no EOF!")
+
+	// We use a custom base-64 encoding because:
+	//
+	//   * '/' and '=' tend to introduce line breaks or breaks in text selection
+	//   * '/' is the path separator in S3
+	Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789+_").WithPadding(base64.NoPadding)
 )
 
 type ErrorResponse struct {
@@ -71,4 +78,14 @@ func DEBUGPrintln(msg string) {
 	if DEBUG {
 		fmt.Println("[DEBUG] " + msg)
 	}
+}
+
+// Encodes binary data for human copy/pasting.
+func EncodeForHuman(bindata []byte) string {
+	return Encoding.EncodeToString(bindata)
+}
+
+// Decodes binary data from the ASCII format
+func DecodeForHuman(human string) ([]byte, error) {
+	return Encoding.DecodeString(human)
 }

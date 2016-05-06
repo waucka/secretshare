@@ -18,7 +18,6 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,7 +61,7 @@ func generateId() (string, error) {
 	if num_id_bytes < 32 {
 		return "", ErrIDShort
 	}
-	return hex.EncodeToString(idbin), nil
+	return commonlib.EncodeForHuman(idbin), nil
 }
 
 func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string, http.Header, error) {

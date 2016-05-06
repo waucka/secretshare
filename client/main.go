@@ -19,21 +19,21 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/user"
 	//"net/http/httputil"
-	"encoding/json"
 	"path/filepath"
 	"strings"
 
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
 
 	"github.com/codegangsta/cli"
 	"github.com/waucka/secretshare/commonlib"
@@ -100,6 +100,18 @@ func cleanUrl(url string) string {
 	return url
 }
 
+func generateKey() ([]byte, string, error) {
+	key := make([]byte, 32)
+	num_key_bytes, err := rand.Read(key)
+	if err != nil {
+		return nil, "", err
+	}
+	if num_key_bytes < 32 {
+		return nil, "", commonlib.NotEnoughKeyRandomnessError
+	}
+	return key, commonlib.EncodeForHuman(key), nil
+}
+
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
 	encrypter, err := commonlib.NewEncrypter(stream, messageSize, key)
 	if err != nil {
@@ -144,14 +156,14 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	req.ContentLength = encrypter.TotalSize
 	commonlib.DEBUGPrintln("Content-Length set!")
 
-	/*dump, err := httputil.DumpRequestOut(req, false)
+	/*//
+	dump, err := httputil.DumpRequestOut(req, false)
 	if err == nil {
-		fmt.Println("Request:")
-		fmt.Printf("%q", dump)
-		fmt.Println()
+		commonlib.DEBUGPrintf("Request:\n")
+		commonlib.DEBUGPrintf("%q\n\n", dump)
 	} else {
-		fmt.Println("Error dumping request!")
-		fmt.Println(err.Error())
+		commonlib.DEBUGPrintf("Error dumping request!\n")
+		commonlib.DEBUGPrintf("%s\n", err.Error())
 		os.Exit(1)
 	}*/
 
@@ -201,19 +213,11 @@ func sendSecret(c *cli.Context) {
 
 	buf := bytes.NewBuffer(requestBytes)
 
-	key := make([]byte, 32)
-	num_key_bytes, err := rand.Read(key)
+	key, keystr, err := generateKey()
 	if err != nil {
-		fmt.Println("Failed to generate key!")
-		fmt.Println(err.Error())
+		fmt.Printf("Failed to generate key: %s\n", err.Error())
 		os.Exit(1)
 	}
-	if num_key_bytes < 32 {
-		fmt.Println("Failed to generate key!")
-		fmt.Println(commonlib.NotEnoughKeyRandomnessError.Error())
-		os.Exit(1)
-	}
-	keystr := hex.EncodeToString(key)
 
 	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/upload")
 	resp, err := http.Post(config.EndpointBaseURL+"/upload", "application/json", buf)
@@ -270,6 +274,7 @@ func sendSecret(c *cli.Context) {
 		Filesize: fileSize,
 	}
 	metabytes, err := json.Marshal(filemeta)
+
 	if err != nil {
 		fmt.Println("Internal error!")
 		fmt.Println(err.Error())
@@ -319,7 +324,7 @@ func recvSecret(c *cli.Context) {
 	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
 	keystr := c.Args()[1]
-	key, err := hex.DecodeString(keystr)
+	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
 		fmt.Println("Malformed key!")
 		fmt.Println(err.Error())
@@ -327,7 +332,11 @@ func recvSecret(c *cli.Context) {
 	}
 
 	// Download metadata
-	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s", config.BucketRegion, config.Bucket, id))
+	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s",
+		url.QueryEscape(config.BucketRegion),
+		url.QueryEscape(config.Bucket),
+		url.QueryEscape(id),
+	))
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
@@ -335,6 +344,7 @@ func recvSecret(c *cli.Context) {
 	}
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
+	fmt.Printf("x-golf %s\n", id)
 	if err != nil {
 		fmt.Println("Failed to download metadata!")
 		fmt.Println(err.Error())
@@ -374,7 +384,12 @@ func recvSecret(c *cli.Context) {
 	defer outf.Close()
 
 	// Download data
-	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s", config.BucketRegion, config.Bucket, id))
+	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s",
+		url.QueryEscape(config.BucketRegion),
+		url.QueryEscape(config.Bucket),
+		url.QueryEscape(id),
+	))
+
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
