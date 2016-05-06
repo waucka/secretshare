@@ -25,7 +25,7 @@ import (
 
 var (
 	APIVersion                  = 2
-	DEBUG                       = true
+	DEBUG                       = false
 	BadBlockSizeError           = errors.New("Block size is >256?  WTF?")
 	ShortReadError              = errors.New("Read was truncated, but then read more data!  This should never happen!")
 	NotEnoughKeyRandomnessError = errors.New("Not enough random bytes for key!  This should never happen!")

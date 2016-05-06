@@ -156,7 +156,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	req.ContentLength = encrypter.TotalSize
 	commonlib.DEBUGPrintln("Content-Length set!")
 
-	/*//@DEBUG
+	/*//
 	dump, err := httputil.DumpRequestOut(req, false)
 	if err == nil {
 		commonlib.DEBUGPrintf("Request:\n")
@@ -274,8 +274,6 @@ func sendSecret(c *cli.Context) {
 		Filesize: fileSize,
 	}
 	metabytes, err := json.Marshal(filemeta)
-	//@DEBUG
-	commonlib.DEBUGPrintf("metabytes: %s\n", metabytes)
 
 	if err != nil {
 		fmt.Println("Internal error!")
