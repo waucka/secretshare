@@ -84,3 +84,8 @@ func DEBUGPrintln(msg string) {
 func EncodeForHuman(bindata []byte) string {
 	return Encoding.EncodeToString(bindata)
 }
+
+// Decodes binary data from the ASCII format
+func DecodeForHuman(human string) ([]byte, error) {
+	return Encoding.DecodeString(human)
+}
