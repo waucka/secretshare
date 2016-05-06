@@ -336,7 +336,7 @@ aws_access_key_id = ${aws_keyid}
 aws_secret_access_key = ${aws_secret}
 region = ${region}
 EOF
-if [ -e "${HOME}/.aws/credentials" ]; then
+if [ -e "${HOME}/.aws/credentials" ] && ! [ -e "${HOME}/.aws/credentials.normal" ]; then
 	cp "${HOME}/.aws/credentials" "${HOME}/.aws/credentials.normal"
 else
 	# If this is empty, "credmgr off" will just delete the credentials file
