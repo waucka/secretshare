@@ -52,6 +52,12 @@ var (
 	Version     = 3 //deploy.sh:VERSION
 )
 
+// Returns a cli.ExitError with the given message, specified in a Printf-like way
+func e(format string, a ...interface{}) error {
+	msg := fmt.Sprintf(format, a...)
+	return cli.NewExitError(msg, 1)
+}
+
 func loadConfig(configPath string) error {
 	configFile, err := os.Open(configPath)
 	if os.IsNotExist(err) {
@@ -182,13 +188,13 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	}
 }
 
-func sendSecret(c *cli.Context) {
+func sendSecret(c *cli.Context) error {
 	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
 	if err != nil {
-		fmt.Println("Failed to load secret key")
-		fmt.Println("($HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set)")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e(`Failed to load secret key
+
+$HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
+Try 'secretshare authenticate <key>' to fix this.`)
 	}
 
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
@@ -196,8 +202,7 @@ func sendSecret(c *cli.Context) {
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
 	if err != nil {
-		fmt.Printf("Can't read file %s: %s\n", filename, err.Error())
-		os.Exit(1)
+		return e("Failed to open your file: %s", err.Error())
 	}
 	fileSize := stats.Size()
 	basename := filepath.Base(filename)
@@ -206,64 +211,56 @@ func sendSecret(c *cli.Context) {
 		SecretKey: secretKey,
 	})
 	if err != nil {
-		fmt.Println("Internal error!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to open your file: %s", err.Error())
 	}
 
 	buf := bytes.NewBuffer(requestBytes)
 
 	key, keystr, err := generateKey()
 	if err != nil {
-		fmt.Printf("Failed to generate key: %s\n", err.Error())
-		os.Exit(1)
+		return e("Failed to generate encryption key: %s", err.Error())
 	}
 
 	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/upload")
 	resp, err := http.Post(config.EndpointBaseURL+"/upload", "application/json", buf)
 	if err != nil {
-		fmt.Println("Failed to connect to server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
 	if resp.Body == nil {
-		fmt.Println("No data received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Empty reply received from secretshare server")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		fmt.Println("The server encountered a problem, so the file cannot be uploaded.  Sorry.")
-		os.Exit(1)
+		return e("The secretshare server encountered an internal error")
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		fmt.Println("You are not authorized to upload via this server.  Sorry.")
-		os.Exit(1)
+		return e(`Failed to authenticate to secretshare server;
+
+This can happen when the secretshare authentication key changes. Ask your administrator
+for the right key, and then run:
+
+secretshare authenticate <key>`)
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("An unknown error occurred (HTTP code %d), so the file cannot be uploaded.  Sorry.",
-			resp.StatusCode)
-		os.Exit(1)
+		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Error reading response from secretshare server: %s\n", err.Error())
 	}
 	var responseData commonlib.UploadResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		fmt.Println(string(bodyBytes))
-		os.Exit(1)
+		return e(`Malformed response received from secretshare server: %s\n
+
+Response body:
+
+%s`, err.Error(), bodyBytes)
 	}
 
 	f, err := os.Open(filename)
 	if err != nil {
-		fmt.Printf("Can't read file %s: %s\n", filename, err.Error())
-		os.Exit(1)
+		return e("Can't read file %s: %s\n", filename, err.Error())
 	}
 	defer f.Close()
 	stream := bufio.NewReader(f)
@@ -276,9 +273,7 @@ func sendSecret(c *cli.Context) {
 	metabytes, err := json.Marshal(filemeta)
 
 	if err != nil {
-		fmt.Println("Internal error!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Error marshaling file metadata: %s\n", err.Error())
 	}
 	metabuf := bytes.NewBuffer(metabytes)
 	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key)
@@ -290,6 +285,7 @@ func sendSecret(c *cli.Context) {
 		config.BucketRegion, config.Bucket, responseData.Id)
 	fmt.Println("To receive this secret:")
 	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
+	return nil
 }
 
 func decrypt(ciphertext, key []byte) []byte {
@@ -319,16 +315,14 @@ func decrypt(ciphertext, key []byte) []byte {
 	return raw[:len(raw)-int(paddingLen)]
 }
 
-func recvSecret(c *cli.Context) {
+func recvSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	id := c.Args()[0]
 	keystr := c.Args()[1]
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
-		fmt.Println("Malformed key!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Invalid secret key given on command line: %s", err.Error())
 	}
 
 	// Download metadata
@@ -338,9 +332,7 @@ func recvSecret(c *cli.Context) {
 		url.QueryEscape(id),
 	))
 	if err != nil {
-		fmt.Println("Failed to download file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to download metadata file from S3: %s", err.Error())
 	}
 	if resp.StatusCode != 200 {
 		fmt.Println("Failed to download file!")
@@ -351,18 +343,14 @@ func recvSecret(c *cli.Context) {
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Failed to download metadata!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to read metadata from S3: %s", err.Error())
 	}
 	realMeta := decrypt(metabytes, key)
 
 	var filemeta commonlib.FileMetadata
 	err = json.Unmarshal(realMeta, &filemeta)
 	if err != nil {
-		fmt.Println("Malformed metadata!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Received malformed metadata from S3: %s", err.Error())
 	}
 
 	// This is how you check if a file exists in Go.  Yep.
@@ -371,20 +359,18 @@ func recvSecret(c *cli.Context) {
 		fmt.Printf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
 		answer, err := inreader.ReadString('\n')
 		if err != nil {
-			os.Exit(1)
+			return e("Error reading user input: %s", err.Error())
 		}
 
 		if answer == "y\n" || answer == "Y\n" {
 			os.Remove(filemeta.Filename)
 		} else {
-			fmt.Printf("Download cancelled.\n")
-			os.Exit(1)
+			return e("Download aborted at user request")
 		}
 	}
 	outf, err := os.Create(filemeta.Filename)
 	if err != nil {
-		fmt.Printf("Can't create file %s: %s\n", filemeta.Filename, err.Error())
-		os.Exit(1)
+		return e("Failed to create file %s: %s\n", filemeta.Filename, err.Error())
 	}
 	defer outf.Close()
 
@@ -395,9 +381,7 @@ func recvSecret(c *cli.Context) {
 		url.QueryEscape(id),
 	))
 	if err != nil {
-		fmt.Println("Failed to download file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to download file from S3: %s", err.Error())
 	}
 	if resp.StatusCode != 200 {
 		fmt.Println("Failed to download file!")
@@ -408,35 +392,31 @@ func recvSecret(c *cli.Context) {
 	defer resp.Body.Close()
 	decrypter, err := commonlib.NewDecrypter(resp.Body, filemeta.Filesize, key)
 	if err != nil {
-		fmt.Println("Failed to set up decryption!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to initiate decryption: %s", err.Error())
 	}
 	bytesWritten, err := io.Copy(outf, decrypter)
 	commonlib.DEBUGPrintf("Wrote %d bytes\n", bytesWritten)
 	if err != nil {
-		fmt.Println("Failed to save file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to save decrypted file: %s", err.Error())
 	}
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
+	return nil
 }
 
-func authenticate(c *cli.Context) {
+func authenticate(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	psk := c.Args()[0]
 	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
 	err := ioutil.WriteFile(keyPath, []byte(psk), 0600)
 	if err != nil {
-		fmt.Println("Failed to save authentication credentials!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to save authentication credentials: %s", err.Error())
 	}
 	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	return nil
 }
 
-func printVersion(c *cli.Context) {
+func printVersion(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
@@ -444,42 +424,36 @@ func printVersion(c *cli.Context) {
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
-		fmt.Println("Failed to connect to server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
 	if resp.Body == nil {
-		fmt.Println("No data received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("No data received from secretshare server")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		fmt.Println("The server encountered a problem, so its version cannot be determined.  Sorry.")
-		os.Exit(1)
+		return e("The secretshare server encountered an internal error")
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return e("Error reading secretshare server response: %s", err.Error())
 	}
 	var responseData commonlib.ServerVersionResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		fmt.Println("Malformed response received from server!")
-		fmt.Println(err.Error())
-		fmt.Println(string(bodyBytes))
-		os.Exit(1)
+		return e(`Malformed response received from secretshare server: %s\n
+
+Response body:
+
+%s`, err.Error(), bodyBytes)
 	}
 
 	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
 	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
 
 	if commonlib.APIVersion != responseData.APIVersion {
-		fmt.Println("WARNING! Server and client APIs do not match!  Update your client.")
-		os.Exit(1)
+		return e("WARNING! Server and client APIs do not match!  Update your client.")
 	}
+	return nil
 }
 
 func main() {

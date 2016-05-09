@@ -23,6 +23,7 @@ import (
 	"crypto/cipher"
 )
 
+// Decrypter implements io.Reader and allows you to read out a decrypted version of a stream.
 type Decrypter struct {
 	stream           io.Reader
 	key              []byte

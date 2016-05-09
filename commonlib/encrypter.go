@@ -25,6 +25,7 @@ import (
 	"crypto/rand"
 )
 
+// Encrypter implements io.Reader and allows you to read out an encrypted version of a stream.
 type Encrypter struct {
 	stream           io.Reader
 	key              []byte
