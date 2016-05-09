@@ -34,6 +34,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 
 	"github.com/codegangsta/cli"
 	"github.com/waucka/secretshare/commonlib"
@@ -118,6 +119,13 @@ func generateKey() ([]byte, string, error) {
 	return key, commonlib.EncodeForHuman(key), nil
 }
 
+// deriveId() generates an S3 object ID corresponding to the given encryption key.
+func deriveId(key []byte) string {
+	sumArray := sha256.Sum256(key)
+	sumSlice := sumArray[:]
+	return commonlib.EncodeForHuman(sumSlice)
+}
+
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
 	encrypter, err := commonlib.NewEncrypter(stream, messageSize, key)
 	if err != nil {
@@ -197,6 +205,15 @@ $HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
 Try 'secretshare authenticate <key>' to fix this.`)
 	}
 
+	key, keystr, err := generateKey()
+	if err != nil {
+		return e("Failed to generate encryption key: %s", err.Error())
+	}
+	idstr := deriveId(key)
+	if err != nil {
+		return e("Failed to generate object ID: %s", err.Error())
+	}
+
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
 	filename := c.Args()[0]
@@ -209,17 +226,13 @@ Try 'secretshare authenticate <key>' to fix this.`)
 	requestBytes, err := json.Marshal(&commonlib.UploadRequest{
 		TTL:       c.Int("ttl"),
 		SecretKey: secretKey,
+		ObjectId:  idstr,
 	})
 	if err != nil {
 		return e("Failed to open your file: %s", err.Error())
 	}
 
 	buf := bytes.NewBuffer(requestBytes)
-
-	key, keystr, err := generateKey()
-	if err != nil {
-		return e("Failed to generate encryption key: %s", err.Error())
-	}
 
 	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/upload")
 	resp, err := http.Post(config.EndpointBaseURL+"/upload", "application/json", buf)
@@ -280,11 +293,11 @@ Response body:
 
 	fmt.Println("File uploaded!")
 	commonlib.DEBUGPrintf("Key: %s\n", keystr)
-	commonlib.DEBUGPrintf("ID: %s\n", responseData.Id)
+	commonlib.DEBUGPrintf("ID: %s\n", idstr)
 	commonlib.DEBUGPrintf("URL: https://s3-%s.amazonaws.com/%s/%s\n",
-		config.BucketRegion, config.Bucket, responseData.Id)
+		config.BucketRegion, config.Bucket, idstr)
 	fmt.Println("To receive this secret:")
-	fmt.Printf("secretshare receive %s %s\n", responseData.Id, keystr)
+	fmt.Printf("secretshare receive %s %s\n", idstr, keystr)
 	return nil
 }
 
