@@ -297,7 +297,7 @@ Response body:
 	commonlib.DEBUGPrintf("URL: https://s3-%s.amazonaws.com/%s/%s\n",
 		config.BucketRegion, config.Bucket, idstr)
 	fmt.Println("To receive this secret:")
-	fmt.Printf("secretshare receive %s %s\n", idstr, keystr)
+	fmt.Printf("secretshare receive %s\n", keystr)
 	return nil
 }
 
@@ -331,12 +331,12 @@ func decrypt(ciphertext, key []byte) []byte {
 func recvSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
-	id := c.Args()[0]
-	keystr := c.Args()[1]
+	keystr := c.Args()[0]
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
 		return e("Invalid secret key given on command line: %s", err.Error())
 	}
+	id := deriveId(key)
 
 	// Download metadata
 	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s",

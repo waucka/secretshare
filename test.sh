@@ -88,9 +88,8 @@ fi
 rm test.txt
 echo 'Output from secretshare:' &> test-client.log
 echo -e "$client_out" > test-client.log
-id=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 3)
-key=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 4)
-$CLIENT receive "$id" "$key" &> test-client.log
+key=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 3)
+$CLIENT receive "$key" &> test-client.log
 kill $server_pid
 
 if [ ! -f test.txt ]; then
