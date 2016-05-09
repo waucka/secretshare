@@ -429,6 +429,32 @@ func authenticate(c *cli.Context) error {
 	return nil
 }
 
+// editConfig() lets the user modify their `.secretsharerc` file.
+//
+// If absent, `.secretsharerc` will be created. If present, it will be replaced with
+// a version that contains the changes specified by the user. We rely on `loadConfig`
+// having loading the config in the first place or having loaded defaults into the
+// global `config` struct.
+func editConfig(c *cli.Context) error {
+	if c.IsSet("endpoint") {
+		config.EndpointBaseURL = cleanUrl(c.String("endpoint"))
+	}
+	if c.IsSet("bucket") {
+		config.Bucket = c.String("bucket")
+	}
+	if c.IsSet("bucket-region") {
+		config.Bucket = c.String("bucket-region")
+	}
+	confBytes, _ := json.Marshal(&config)
+	confPath := filepath.Join(currentUser.HomeDir, ".secretsharerc")
+	err := ioutil.WriteFile(confPath, confBytes, 0600)
+	if err != nil {
+		return e("Failed to save config: %s", err.Error())
+	}
+	fmt.Printf("Configuration saved to %s.\n", confPath)
+	return nil
+}
+
 func printVersion(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
@@ -532,6 +558,25 @@ func main() {
 			Name:   "authenticate",
 			Usage:  "Save authentication credentials for later use",
 			Action: authenticate,
+		},
+		{
+			Name:   "config",
+			Usage:  "Configure the secretshare client by modifying ~/.secretsharerc and/or ~/.secretshare.key",
+			Action: editConfig,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "endpoint",
+					Usage: "API endpoint to connect to when requesting IDs",
+				},
+				cli.StringFlag{
+					Name:  "bucket-region",
+					Usage: "Region for S3 bucket to store files in",
+				},
+				cli.StringFlag{
+					Name:  "bucket",
+					Usage: "S3 bucket to store files in",
+				},
+			},
 		},
 	}
 	app.Run(os.Args)
