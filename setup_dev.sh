@@ -302,10 +302,11 @@ bucket=$(create_or_pick_bucket "${profile}")
 
 step=$((step+1))
 echo
-echo "${step} Populate vars.json"
+echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
 sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
+sed -e "s/THISISABADKEY/${secretshare_key}/" test-server.json.example > test-server.json
 
 
 step=$((step+1))
@@ -335,7 +336,7 @@ aws_access_key_id = ${aws_keyid}
 aws_secret_access_key = ${aws_secret}
 region = ${region}
 EOF
-if [ -e "${HOME}/.aws/credentials" ]; then
+if [ -e "${HOME}/.aws/credentials" ] && ! [ -e "${HOME}/.aws/credentials.normal" ]; then
 	cp "${HOME}/.aws/credentials" "${HOME}/.aws/credentials.normal"
 else
 	# If this is empty, "credmgr off" will just delete the credentials file
