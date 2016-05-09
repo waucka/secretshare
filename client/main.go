@@ -119,6 +119,11 @@ func generateKey() ([]byte, string, error) {
 	return key, commonlib.EncodeForHuman(key), nil
 }
 
+// writeKey() writes the given pre-shared key to the given file.
+func writeKey(psk, keyPath string) error {
+	return ioutil.WriteFile(keyPath, []byte(psk), 0600)
+}
+
 // deriveId() generates an S3 object ID corresponding to the given encryption key.
 func deriveId(key []byte) string {
 	sumArray := sha256.Sum256(key)
@@ -421,21 +426,22 @@ func authenticate(c *cli.Context) error {
 	config.Bucket = c.Parent().String("bucket")
 	psk := c.Args()[0]
 	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
-	err := ioutil.WriteFile(keyPath, []byte(psk), 0600)
+	err := writeKey(psk, keyPath)
 	if err != nil {
-		return e("Failed to save authentication credentials: %s", err.Error())
+		return e("Failed to save pre-shared key: %s", err.Error())
 	}
 	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
 	return nil
 }
 
-// editConfig() lets the user modify their `.secretsharerc` file.
+// editConfig() lets the user modify their `.secretsharerc` and `.secretshare.key` files.
 //
 // If absent, `.secretsharerc` will be created. If present, it will be replaced with
 // a version that contains the changes specified by the user. We rely on `loadConfig`
 // having loading the config in the first place or having loaded defaults into the
 // global `config` struct.
 func editConfig(c *cli.Context) error {
+	// .secretsharerc
 	if c.IsSet("endpoint") {
 		config.EndpointBaseURL = cleanUrl(c.String("endpoint"))
 	}
@@ -443,7 +449,7 @@ func editConfig(c *cli.Context) error {
 		config.Bucket = c.String("bucket")
 	}
 	if c.IsSet("bucket-region") {
-		config.Bucket = c.String("bucket-region")
+		config.BucketRegion = c.String("bucket-region")
 	}
 	confBytes, _ := json.Marshal(&config)
 	confPath := filepath.Join(currentUser.HomeDir, ".secretsharerc")
@@ -452,6 +458,18 @@ func editConfig(c *cli.Context) error {
 		return e("Failed to save config: %s", err.Error())
 	}
 	fmt.Printf("Configuration saved to %s.\n", confPath)
+
+	// .secretshare.key
+	if c.IsSet("auth-key") {
+		psk := c.String("auth-key")
+		keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
+		err = writeKey(psk, keyPath)
+		if err != nil {
+			return e("Failed to save pre-shared key: %s", err.Error())
+		}
+		fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	}
+
 	return nil
 }
 
@@ -575,6 +593,10 @@ func main() {
 				cli.StringFlag{
 					Name:  "bucket",
 					Usage: "S3 bucket to store files in",
+				},
+				cli.StringFlag{
+					Name:  "auth-key",
+					Usage: "Pre-shared authentication key for talking to secretshare server",
 				},
 			},
 		},
