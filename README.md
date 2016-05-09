@@ -62,13 +62,6 @@ In order to use secretshare with a given server, you need to prove to that serve
 
     $ secretshare receive JOlFukTBXDlsdS8P+8ETA_z25hU5Ou4bOvXpJQFV0Wc
 
-## TODO
-
-- [ ] Allow lifespans other than the default bucket lifespan (requires server support)
-- [ ] Force HTTPS on the client side without interfering with local development
-- [ ] Implement a web interface for CLI-averse users
-- [ ] Better error handling (e.g. wrong number of arguments)
-
 ## Details of operation
 
 Suppose you run `secretshare send foobar.txt`.  What happens?
