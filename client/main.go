@@ -342,9 +342,14 @@ func recvSecret(c *cli.Context) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	if resp.StatusCode != 200 {
+		fmt.Println("Failed to download file!")
+		fmt.Printf("Server returned status '%d'\n", resp.StatusCode)
+		os.Exit(1)
+	}
+
 	defer resp.Body.Close()
 	metabytes, err := ioutil.ReadAll(resp.Body)
-	fmt.Printf("x-golf %s\n", id)
 	if err != nil {
 		fmt.Println("Failed to download metadata!")
 		fmt.Println(err.Error())
@@ -389,12 +394,17 @@ func recvSecret(c *cli.Context) {
 		url.QueryEscape(config.Bucket),
 		url.QueryEscape(id),
 	))
-
 	if err != nil {
 		fmt.Println("Failed to download file!")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	if resp.StatusCode != 200 {
+		fmt.Println("Failed to download file!")
+		fmt.Printf("Server returned status '%d'\n", resp.StatusCode)
+		os.Exit(1)
+	}
+
 	defer resp.Body.Close()
 	decrypter, err := commonlib.NewDecrypter(resp.Body, filemeta.Filesize, key)
 	if err != nil {
