@@ -46,7 +46,6 @@ type ErrorResponse struct {
 }
 
 type UploadResponse struct {
-	Id          string      `json:"id"`
 	PutURL      string      `json:"put_url"`
 	Headers     http.Header `json:"headers"`
 	MetaPutURL  string      `json:"meta_put_url"`
@@ -56,6 +55,7 @@ type UploadResponse struct {
 type UploadRequest struct {
 	TTL       int    `json:"ttl"`
 	SecretKey string `json:"secret_key"`
+	ObjectId  string `json:"object_id"`
 }
 
 type FileMetadata struct {

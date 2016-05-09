@@ -17,7 +17,6 @@ package main
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,18 +49,6 @@ type serverConfig struct {
 	ListenAddr string `json:"addr"`
 	ListenPort int    `json:"port"`
 	SecretKey  string `json:"secret_key"`
-}
-
-func generateId() (string, error) {
-	idbin := make([]byte, 32)
-	num_id_bytes, err := rand.Read(idbin)
-	if err != nil {
-		return "", ErrIDGen
-	}
-	if num_id_bytes < 32 {
-		return "", ErrIDShort
-	}
-	return commonlib.EncodeForHuman(idbin), nil
 }
 
 func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string, http.Header, error) {
@@ -154,14 +141,22 @@ func runServer(c *cli.Context) {
 			ttl = time.Minute * time.Duration(requestData.TTL)
 		}
 
-		id, err := generateId()
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, &commonlib.ErrorResponse{
-				Message: err.Error(),
+		if requestData.ObjectId == "" {
+			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
+				Message: "No object ID provided in request",
 			})
-			log.Print(err.Error())
+			log.Print("No object ID provided in request")
 			return
 		}
+		_, err = commonlib.DecodeForHuman(requestData.ObjectId)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
+				Message: "Malformed object ID provided in request",
+			})
+			log.Printf("Malformed object ID provided in request: %s\n", err.Error())
+			return
+		}
+		id := requestData.ObjectId
 
 		putURL, headers, err := generateSignedURL(svc, id, "", ttl)
 		if err != nil {
@@ -182,7 +177,6 @@ func runServer(c *cli.Context) {
 		}
 
 		c.JSON(http.StatusOK, &commonlib.UploadResponse{
-			Id:          id,
 			PutURL:      putURL,
 			MetaPutURL:  metaPutURL,
 			Headers:     headers,
