@@ -48,11 +48,11 @@ You will need to run the server as an appropriately privileged user.  See policy
 
 ## Usage
 
-### Authenticating to the secretshare server
+### Authentication
 
 In order to use secretshare with a given server, you need to prove to that server that you're authorized. You do this by providing it with a pre-shared authentication key. This key is defined in the server's configuration at `/etc/secretshare-server.json`.
 
-    $ secretshare authenticate YOUR_PRE_SHARED_KEY
+    $ secretshare config --auth-key YOUR_PRE_SHARED_KEY
 
 ### Sending a secret
 
