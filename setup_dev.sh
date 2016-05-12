@@ -14,9 +14,9 @@ function contains() {
 }
 
 function tempfile() {
-    if [ "$(current_os)" == "osx" ]; then
+    if [ "$(pick_os)" == "osx" ]; then
         mktemp -t secretshare
-    elif [ "$(current_os)" == "linux" ]; then
+    elif [ "$(pick_os)" == "linux" ]; then
         mktemp secretshare.XXXXXXXX
     fi
 }
@@ -64,6 +64,24 @@ aws_access_key_id = ${aws_access_key_id}
 aws_secret_access_key = ${aws_secret_access_key}
 region = ${aws_region}
 EOF
+}
+
+function pick_bind_ip() {
+    echo >&2 -n "  Binding IP (default: 127.0.0.1): "
+    read bind_ip
+    if [ -z "${bind_ip}" ]; then
+        bind_ip=127.0.0.1
+    fi
+	echo "${bind_ip}"
+}
+
+function pick_bind_port() {
+    echo >&2 -n "  Binding port (default: 8080): "
+    read bind_port
+    if [ -z "${bind_port}" ]; then
+        bind_port=8080
+    fi
+	echo "${bind_port}"
 }
 
 function pick_aws_profile() {
@@ -291,19 +309,13 @@ mkdir -p build/{linux,osx,win}-amd64
 step=$((step+1))
 echo "${step} Choose the binding address and port for the secretshare server"
 echo
-echo "  You can always change this later by editing secretshare-server.json."
+echo "  You can always change this later by editing secretshare-server.json. To listen on"
+echo "  all IP addresses, choose 0.0.0.0."
 echo
-# YOU ARE HERE
-if ! [ -e "${HOME}/.aws/config" ]; then
-	missing_aws_config
-	profile="default"
-elif ! [ -r "${HOME}/.aws/config" ]; then
-	echo "Cannot read AWS credentials from '${HOME}/.aws/config'"
-	exit 1
-else
-	profile=$(pick_aws_profile)
-fi
-region=$(aws --profile "${profile}" configure get region)
+bind_ip=$(pick_bind_ip)
+bind_port=$(pick_bind_port)
+server_endpoint="${bind_ip}:${bind_port}"
+echo
 
 
 step=$((step+1))
