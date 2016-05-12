@@ -40,7 +40,7 @@ Compile, then put the `secretshare` executable somewhere in your `$PATH`.
 
 1. Put `secretshare-server` somewhere convenient.
 2. Copy `secretshare-server.json.example` to `/etc/secretshare-server.json`.
-3. Write an initscript or systemd unit to launch secretshare-server as an equivalently unprivileged user
+3. Write an initscript or systemd unit to launch secretshare-server as an unprivileged user
 
 ### AWS Credentials
 
