@@ -13,6 +13,14 @@ function contains() {
     return 1
 }
 
+function tempfile() {
+    if [ "$(current_os)" == "osx" ]; then
+        mktemp -t secretshare
+    elif [ "$(current_os)" == "linux" ]; then
+        mktemp secretshare.XXXXXXXX
+    fi
+}
+
 function missing_aws_config() {
 	echo "  You have no credentials in $HOME/.aws/config. Please enter the AWS credentials"
 	echo "  you want to use to set up the AWS user and S3 bucket that secretshare needs."
@@ -88,8 +96,8 @@ function bucket_writable() {
 	aws_profile="${1}"
 	bucket="${2}"
 	test_contents="${RANDOM}"
-	infile="$(mktemp -t secretshare)"
-	outfile="$(mktemp -t secretshare)"
+	infile="$(tempfile)"
+	outfile="$(tempfile)"
 	echo "${test_contents}" > "${infile}"
 	if ! aws --profile "${aws_profile}" s3 cp --quiet "${infile}" "s3://${bucket}/test.txt"; then
 		echo "n"
@@ -132,6 +140,8 @@ function create_bucket() {
 		read bucket
 	done
 	aws --profile "${aws_profile}" s3api create-bucket --bucket "${bucket}" >/dev/null
+    aws --profile "${aws_profile}" s3api put-bucket-lifecycle --bucket "${bucket}" --lifecycle-configuration '{"Rules":[{"Prefix":"/","Status":"Enabled","Expiration":{"Days":1}}]}' >/dev/null
+
 	echo "${bucket}"
 }
 
@@ -185,7 +195,7 @@ function create_iam_user() {
 	fi
 	aws --profile "${aws_profile}" iam create-user --user-name "${username}" >/dev/null
 	policy_name="secretshare-${RANDOM}-${RANDOM}"
-	policy_file=$(mktemp -t secretshare)
+	policy_file=$(tempfile)
 	cat >"${policy_file}" <<EOF
 {
     "Version": "2012-10-17",
@@ -275,7 +285,25 @@ step=0
 step=$((step+1))
 echo "${step} Create build output directories"
 echo
-./setup_build.sh
+mkdir -p build/{linux,osx,win}-amd64
+
+
+step=$((step+1))
+echo "${step} Choose the binding address and port for the secretshare server"
+echo
+echo "  You can always change this later by editing secretshare-server.json."
+echo
+# YOU ARE HERE
+if ! [ -e "${HOME}/.aws/config" ]; then
+	missing_aws_config
+	profile="default"
+elif ! [ -r "${HOME}/.aws/config" ]; then
+	echo "Cannot read AWS credentials from '${HOME}/.aws/config'"
+	exit 1
+else
+	profile=$(pick_aws_profile)
+fi
+region=$(aws --profile "${profile}" configure get region)
 
 
 step=$((step+1))
@@ -306,7 +334,7 @@ echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
 sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
-sed -e "s/THISISABADKEY/${secretshare_key}/" test-server.json.example > test-server.json
+sed -e "s/THISISABADKEY/${secretshare_key}/" server.json.example > secretshare-server.json
 
 
 step=$((step+1))
@@ -344,7 +372,9 @@ else
 fi
 
 echo
-echo "You're ready to hack!"
+echo "Done!"
+echo
+echo "_____________ If you're hacking _____________"
 echo
 echo "The credentials with which the server will run have been written to"
 echo "~/.aws/credentials.secretshare. To start hacking on secretshare, you'll:"
@@ -362,3 +392,20 @@ echo
 echo "./credmgr off"
 echo
 echo "Go ahead. Try \"./credmgr on && source test_env && make test\"."
+echo
+echo "_____________ If you're installing for real _____________"
+echo
+echo "Your binaries are in the build directory. Copy secretshare-server to"
+echo "/usr/local/bin on the target server. Copy secretshare-server.json to"
+echo "/etc on the target server. Then start it."
+echo
+echo "Once the server is running, send out the various secretshare binaries"
+echo "(for different operating systems) to your users, along with the"
+echo "following command to initialize their setup:"
+echo
+echo "secretshare config --endpoint '${server_endpoint}' --bucket-region '${region}' --bucket '${bucket}' --auth-key '${secretshare_key}'"
+echo
+echo "After they run that command, they should be good to go."
+echo
+echo "Enjoy! And if you find any bugs or want to suggest any improvements,"
+echo "hit us up at https://github.com/secretshare."

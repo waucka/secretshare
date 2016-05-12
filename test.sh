@@ -29,7 +29,7 @@ if [ "x$CURRENT_ARCH" == "x" ]; then
 fi
 
 killall secretshare-server
-./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config test-server.json &> test-server.log &
+./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server.json &> test-server.log &
 server_pid=$!
 
 sleep 2
