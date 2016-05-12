@@ -11,6 +11,7 @@ var (
 	EndpointBaseURL = "{EndpointBaseURL}"
 	BucketRegion = "{BucketRegion}"
 	Bucket = "{Bucket}"
+	SourceLocation = "{SourceLocation}"
 )
 """.format(**vars_dict))
 

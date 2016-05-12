@@ -78,6 +78,10 @@ Now suppose somebody runs `secretshare receive $KEY`, `$KEY` is the key from the
 1. The secretshare client downloads the metadata bundle from S3 and decrypts it.
 2. The secretshare client downloads the file from S3 and decrypts it, naming it according to the name in the metadata bundle.  If a file with that name already exists, it will prompt the user before overwriting it.  It decrypts the file on-the-fly, so large files can be decrypted without using an inordinate amount of memory.
 
+## Forking
+
+If you wish to fork, please update SourceLocation in vars.json.example to the location of your forked source code repository.
+
 ## Thanks
 
 Many thanks to my employer, [Exosite](https://exosite.com/), which gives its employees the freedom to open-source broadly useful tools like this.

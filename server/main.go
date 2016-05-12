@@ -117,6 +117,7 @@ func runServer(c *cli.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
 			ServerVersion: Version,
 			APIVersion:    commonlib.APIVersion,
+			ServerSourceLocation: commonlib.SourceLocation,
 		})
 	})
 	r.POST("/upload", func(c *gin.Context) {
