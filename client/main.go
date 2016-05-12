@@ -465,6 +465,7 @@ func printVersion(c *cli.Context) error {
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
 	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
+	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
@@ -493,6 +494,7 @@ Response body:
 
 	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
 	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
+	fmt.Printf("Server source code: %s\n", responseData.ServerSourceLocation)
 
 	if commonlib.APIVersion != responseData.APIVersion {
 		return e("WARNING! Server and client APIs do not match!  Update your client.")
