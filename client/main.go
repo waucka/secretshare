@@ -207,7 +207,7 @@ func sendSecret(c *cli.Context) error {
 		return e(`Failed to load secret key
 
 $HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
-Try 'secretshare authenticate <key>' to fix this.`)
+Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 
 	key, keystr, err := generateKey()
@@ -257,7 +257,7 @@ Try 'secretshare authenticate <key>' to fix this.`)
 This can happen when the secretshare authentication key changes. Ask your administrator
 for the right key, and then run:
 
-secretshare authenticate <key>`)
+secretshare config --auth-key <key>`)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
@@ -421,19 +421,6 @@ func recvSecret(c *cli.Context) error {
 	return nil
 }
 
-func authenticate(c *cli.Context) error {
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	psk := c.Args()[0]
-	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
-	err := writeKey(psk, keyPath)
-	if err != nil {
-		return e("Failed to save pre-shared key: %s", err.Error())
-	}
-	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
-	return nil
-}
-
 // editConfig() lets the user modify their `.secretsharerc` and `.secretshare.key` files.
 //
 // If absent, `.secretsharerc` will be created. If present, it will be replaced with
@@ -571,11 +558,6 @@ func main() {
 			Name:   "version",
 			Usage:  "Print client and server version",
 			Action: printVersion,
-		},
-		{
-			Name:   "authenticate",
-			Usage:  "Save authentication credentials for later use",
-			Action: authenticate,
 		},
 		{
 			Name:   "config",

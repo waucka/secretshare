@@ -30,7 +30,7 @@ You will need to run the server as an appropriately privileged user.  See policy
 
 ### Authentication
 
-    $ secretshare authenticate YOUR_PRE_SHARED_KEY
+    $ secretshare config --auth-key YOUR_PRE_SHARED_KEY
 
 ### Sending
 
