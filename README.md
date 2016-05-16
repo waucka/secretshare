@@ -114,6 +114,15 @@ To set up your dev environment initially, you'll want to run `setup.sh` and `mak
 
 To run tests, first you need to run `go get gopkg.in/check.v1`. And then run `credmgr on`. And then run `source test_env`. And then run `make test`. Optionally, you can also run `go test github.com/waucka/secretshare/commonlib` to run the unit tests for encryption and decryption.
 
+## Distribution
+
+When distributing, please change SourceLocation in vars.json to the location of the exact source code used to compile.
+
+## Forking
+
+If you wish to fork, please update SourceLocation in vars.json.example to the location of your forked source code repository.
+>>>>>>> master
+
 ## Thanks
 
 Many thanks to my employer, [Exosite](https://exosite.com/), which gives its employees the freedom to open-source broadly useful tools like this.

@@ -119,6 +119,11 @@ func generateKey() ([]byte, string, error) {
 	return key, commonlib.EncodeForHuman(key), nil
 }
 
+// writeKey() writes the given pre-shared key to the given file.
+func writeKey(psk, keyPath string) error {
+	return ioutil.WriteFile(keyPath, []byte(psk), 0600)
+}
+
 // deriveId() generates an S3 object ID corresponding to the given encryption key.
 func deriveId(key []byte) string {
 	sumArray := sha256.Sum256(key)
@@ -202,7 +207,7 @@ func sendSecret(c *cli.Context) error {
 		return e(`Failed to load secret key
 
 $HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
-Try 'secretshare authenticate <key>' to fix this.`)
+Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 
 	key, keystr, err := generateKey()
@@ -252,7 +257,7 @@ Try 'secretshare authenticate <key>' to fix this.`)
 This can happen when the secretshare authentication key changes. Ask your administrator
 for the right key, and then run:
 
-secretshare authenticate <key>`)
+secretshare config --auth-key <key>`)
 	}
 	if resp.StatusCode != http.StatusOK {
 		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
@@ -416,16 +421,42 @@ func recvSecret(c *cli.Context) error {
 	return nil
 }
 
-func authenticate(c *cli.Context) error {
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	psk := c.Args()[0]
-	keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
-	err := ioutil.WriteFile(keyPath, []byte(psk), 0600)
-	if err != nil {
-		return e("Failed to save authentication credentials: %s", err.Error())
+// editConfig() lets the user modify their `.secretsharerc` and `.secretshare.key` files.
+//
+// If absent, `.secretsharerc` will be created. If present, it will be replaced with
+// a version that contains the changes specified by the user. We rely on `loadConfig`
+// having loading the config in the first place or having loaded defaults into the
+// global `config` struct.
+func editConfig(c *cli.Context) error {
+	// .secretsharerc
+	if c.IsSet("endpoint") {
+		config.EndpointBaseURL = cleanUrl(c.String("endpoint"))
 	}
-	fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	if c.IsSet("bucket") {
+		config.Bucket = c.String("bucket")
+	}
+	if c.IsSet("bucket-region") {
+		config.BucketRegion = c.String("bucket-region")
+	}
+	confBytes, _ := json.Marshal(&config)
+	confPath := filepath.Join(currentUser.HomeDir, ".secretsharerc")
+	err := ioutil.WriteFile(confPath, confBytes, 0600)
+	if err != nil {
+		return e("Failed to save config: %s", err.Error())
+	}
+	fmt.Printf("Configuration saved to %s.\n", confPath)
+
+	// .secretshare.key
+	if c.IsSet("auth-key") {
+		psk := c.String("auth-key")
+		keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
+		err = writeKey(psk, keyPath)
+		if err != nil {
+			return e("Failed to save pre-shared key: %s", err.Error())
+		}
+		fmt.Printf("Authentication credentials saved to %s.\n", keyPath)
+	}
+
 	return nil
 }
 
@@ -434,6 +465,7 @@ func printVersion(c *cli.Context) error {
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
 	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
+	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
@@ -462,6 +494,7 @@ Response body:
 
 	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
 	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
+	fmt.Printf("Server source code: %s\n", responseData.ServerSourceLocation)
 
 	if commonlib.APIVersion != responseData.APIVersion {
 		return e("WARNING! Server and client APIs do not match!  Update your client.")
@@ -529,9 +562,27 @@ func main() {
 			Action: printVersion,
 		},
 		{
-			Name:   "authenticate",
-			Usage:  "Save authentication credentials for later use",
-			Action: authenticate,
+			Name:   "config",
+			Usage:  "Configure the secretshare client by modifying ~/.secretsharerc and/or ~/.secretshare.key",
+			Action: editConfig,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "endpoint",
+					Usage: "API endpoint to connect to when requesting IDs",
+				},
+				cli.StringFlag{
+					Name:  "bucket-region",
+					Usage: "Region for S3 bucket to store files in",
+				},
+				cli.StringFlag{
+					Name:  "bucket",
+					Usage: "S3 bucket to store files in",
+				},
+				cli.StringFlag{
+					Name:  "auth-key",
+					Usage: "Pre-shared authentication key for talking to secretshare server",
+				},
+			},
 		},
 	}
 	app.Run(os.Args)
