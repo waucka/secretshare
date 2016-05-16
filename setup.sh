@@ -67,21 +67,31 @@ EOF
 }
 
 function pick_bind_ip() {
-    echo >&2 -n "  Binding IP (default: 127.0.0.1): "
-    read bind_ip
-    if [ -z "${bind_ip}" ]; then
-        bind_ip=127.0.0.1
-    fi
+	echo >&2 -n "  Binding IP (default: 127.0.0.1): "
+	read bind_ip
+	if [ -z "${bind_ip}" ]; then
+		bind_ip=127.0.0.1
+	fi
 	echo "${bind_ip}"
 }
 
 function pick_bind_port() {
-    echo >&2 -n "  Binding port (default: 8080): "
-    read bind_port
-    if [ -z "${bind_port}" ]; then
-        bind_port=8080
-    fi
+	echo >&2 -n "  Binding port (default: 8080): "
+	read bind_port
+	if [ -z "${bind_port}" ]; then
+		bind_port=8080
+	fi
 	echo "${bind_port}"
+}
+
+function pick_server_endpoint() {
+	default="${1}"
+	echo >&2 -n "  The URL at which secretshare-server will be hosted (default: ${default}): "
+	read server_endpoint
+	if [ -z "${server_endpoint}" ]; then
+		server_endpoint="${default}"
+	fi
+	echo "${server_endpoint}"
 }
 
 function pick_aws_profile() {
@@ -314,7 +324,7 @@ echo "  all IP addresses, choose 0.0.0.0."
 echo
 bind_ip=$(pick_bind_ip)
 bind_port=$(pick_bind_port)
-server_endpoint="${bind_ip}:${bind_port}"
+server_endpoint=$(pick_server_endpoint "http://${bind_ip}:${bind_port}")
 echo
 
 
@@ -345,8 +355,8 @@ echo
 echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
-sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
-sed -e "s/THISISABADKEY/${secretshare_key}/" server.json.example > secretshare-server.json
+sed -e "s!http://localhost:8080!${server_endpoint}!; s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
+sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; /THISISABADKEY/${secretshare_key}/" secretshare-server.json.example > secretshare-server.json
 
 
 step=$((step+1))
