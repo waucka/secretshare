@@ -46,9 +46,11 @@ var (
 )
 
 type serverConfig struct {
-	ListenAddr string `json:"addr"`
-	ListenPort int    `json:"port"`
-	SecretKey  string `json:"secret_key"`
+	ListenAddr         string `json:"addr"`
+	ListenPort         int    `json:"port"`
+	SecretKey          string `json:"secret_key"`
+	AwsAccessKeyId     string `json:"aws_access_key_id"`
+	AwsSecretAccessKey string `json:"aws_secret_access_key"`
 }
 
 func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string, http.Header, error) {
@@ -82,12 +84,6 @@ func main() {
 }
 
 func runServer(c *cli.Context) {
-	sess := session.New(&aws.Config{
-		Region:      aws.String(commonlib.BucketRegion),
-		Credentials: credentials.NewSharedCredentials("", "default"),
-	})
-	svc := s3.New(sess)
-
 	var config serverConfig
 	{
 		configPath := c.String("config")
@@ -112,11 +108,17 @@ func runServer(c *cli.Context) {
 		}
 	}
 
+	sess := session.New(&aws.Config{
+		Region:      aws.String(commonlib.BucketRegion),
+		Credentials: credentials.NewStaticCredentials(config.AwsAccessKeyId, config.AwsSecretAccessKey, ""),
+	})
+	svc := s3.New(sess)
+
 	r := gin.Default()
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
-			ServerVersion: Version,
-			APIVersion:    commonlib.APIVersion,
+			ServerVersion:        Version,
+			APIVersion:           commonlib.APIVersion,
 			ServerSourceLocation: commonlib.SourceLocation,
 		})
 	})
