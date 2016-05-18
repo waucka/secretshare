@@ -163,11 +163,12 @@ function pick_bucket() {
 
 function create_bucket() {
 	aws_profile="${1}"
+    region="${2}"
 	while [ -z "${bucket}" ]; do
 		echo >&2 -n "  New S3 bucket name: "
 		read bucket
 	done
-	aws --profile "${aws_profile}" s3api create-bucket --bucket "${bucket}" >/dev/null
+	aws --profile "${aws_profile}" s3api create-bucket --bucket "${bucket}" --region "${region}" >/dev/null
     aws --profile "${aws_profile}" s3api put-bucket-lifecycle --bucket "${bucket}" --lifecycle-configuration '{"Rules":[{"Prefix":"/","Status":"Enabled","Expiration":{"Days":1}}]}' >/dev/null
 
 	echo "${bucket}"
@@ -175,6 +176,7 @@ function create_bucket() {
 
 function create_or_pick_bucket() {
 	aws_profile="${1}"
+    region="${2}"
 	while [ "${yn}" != "y" ] && [ "${yn}" != "n" ]; do
 		echo >&2 -n "  Is there already an S3 bucket with which you want to use secretshare? (y/n) "
 		read yn
@@ -184,7 +186,7 @@ function create_or_pick_bucket() {
 		echo "$(pick_bucket "${aws_profile}")"
 		return
 	fi
-	echo "$(create_bucket "${aws_profile}")"
+	echo "$(create_bucket "${aws_profile}" "${region}")"
 }
 
 function gen_secretshare_key() {
@@ -347,7 +349,7 @@ step=$((step+1))
 echo
 echo "${step} Establish S3 bucket"
 echo
-bucket=$(create_or_pick_bucket "${profile}")
+bucket=$(create_or_pick_bucket "${profile}" "${region}")
 
 
 step=$((step+1))
@@ -367,22 +369,9 @@ EOF
 step=$((step+1))
 echo
 echo "${step} Set up AWS credentials for secretshare user"
-echo
 secretshare_creds=$(create_or_pick_iam_user "${profile}" "${bucket}")
 aws_keyid=$(cut -d: -f1 <<<"${secretshare_creds}")
 aws_secret=$(cut -d: -f2 <<<"${secretshare_creds}")
-cat >"${HOME}/.aws/credentials.secretshare" <<EOF
-[default]
-aws_access_key_id = ${aws_keyid}
-aws_secret_access_key = ${aws_secret}
-region = ${region}
-EOF
-if [ -e "${HOME}/.aws/credentials" ] && ! [ -e "${HOME}/.aws/credentials.normal" ]; then
-	cp "${HOME}/.aws/credentials" "${HOME}/.aws/credentials.normal"
-else
-	# If this is empty, "credmgr off" will just delete the credentials file
-	touch "${HOME}/.aws/credentials.normal"
-fi
 
 
 step=$((step+1))
@@ -390,8 +379,8 @@ echo
 echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
-sed -e "s!http://localhost:8080!${server_endpoint}!; s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
-sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; s/THISISABADKEY/${secretshare_key}/; s/%AWS_ACCESS_KEY_ID%/${aws_keyid}/; s/%AWS_SECRET_ACCESS_KEY%/${aws_secret}/" secretshare-server.json.example > secretshare-server.json
+sed -e "s!http://localhost:8080!${server_endpoint}!; s/us-west-1/${region}/; s/\"secretshare\"/${bucket}/; s!THISISABADKEY!${secretshare_key}!" vars.json.example > vars.json
+sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; s!THISISABADKEY!${secretshare_key}!; s!%AWS_ACCESS_KEY_ID%!${aws_keyid}!; s!%AWS_SECRET_ACCESS_KEY%!${aws_secret}!" secretshare-server.json.example > secretshare-server.json
 
 
 echo

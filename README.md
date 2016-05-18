@@ -62,11 +62,10 @@ You will need Git, Go (probably at least 1.5?), Python 2, and make.  Don't forge
 Build on a machine with the same CPU architecture as the one you'll be deploying to.
 
 1. Run `go get github.com/waucka/secretshare`. Ignore any "no buildable Go source files" warnings.
-2. Run `cd $GOPATH/src/github.com/waucka/secretshare`
+2. Run `cd $GOPATH/src/github.com/waucka/secretshare && go get ...`. You'll get some errors from the `go get` command, but they're most likely harmless.
 3. Run `./setup.sh`. This sets up your config files and environment for building (or developing) secretshare. It also creates or configures the S3 bucket and AWS credentials that secretshare will use. It outputs a `secretshare config` command that you'll need to give to your users; __save this!__
-4. Run `go get`. Ignore any "no buildable Go source files" warnings.
 5. Run `make`, and it should build secretshare and secretshare-server.  You can also run `make linux`, `make osx`, or `make windows` to only build binaries for the platform of your choice.  Binaries will be in `build/$OS-$ARCH/`.  `$ARCH` can only be `amd64` right now.
-6. Copy `secretshare-server` to `/usr/local/bin` on the target server. Copy `secretshare-server.json` to `/etc/secretshare-server.json` on the same server.
+6. Copy `secretshare-server` to `/usr/local/bin` on the target server. Copy `secretshare-server.json` to `/etc/secretshare-server.json` on the same server. Make sure it's readable only by the user that `secretshare-server` is going to run as.
 7. Configure secretshare-server to start on boot, run as an unprivileged user, and restart if it crashes.
 
 You should also put HTTPS in front of `secretshare-server`. See [the nginx documentation](https://www.nginx.com/resources/admin-guide/nginx-tcp-ssl-upstreams/) for a walkthrough of putting an HTTPS-enabled proxy in front of an application.

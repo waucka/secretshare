@@ -194,10 +194,10 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 		os.Exit(1)
 	}
 	if resp.StatusCode != http.StatusOK {
-		commonlib.DEBUGPrintf("Failed to upload file!  Status code: %d\n", resp.StatusCode)
+		commonlib.DEBUGPrintf("Failed to upload file! S3 server returned status code: %d\n", resp.StatusCode)
 		commonlib.DEBUGPrintf(`curl -XPUT -d @$FILENAME %s '%s'`, strings.Join(headerStrings, " "), putURL)
 		fmt.Println("Failed to upload file!")
-		fmt.Printf("Server returned status '%d'\n", resp.StatusCode)
+		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
 		os.Exit(1)
 	}
 }
@@ -355,7 +355,7 @@ func recvSecret(c *cli.Context) error {
 	}
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Failed to download file!")
-		fmt.Printf("Server returned status '%d'\n", resp.StatusCode)
+		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
 		os.Exit(1)
 	}
 
@@ -404,7 +404,7 @@ func recvSecret(c *cli.Context) error {
 	}
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Failed to download file!")
-		fmt.Printf("Server returned status '%d'\n", resp.StatusCode)
+		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
 		os.Exit(1)
 	}
 
