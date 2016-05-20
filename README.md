@@ -120,7 +120,6 @@ When distributing, please change SourceLocation in vars.json to the location of 
 ## Forking
 
 If you wish to fork, please update SourceLocation in vars.json.example to the location of your forked source code repository.
->>>>>>> master
 
 ## Thanks
 
