@@ -8,14 +8,6 @@ with open('vars.json', 'r') as f:
 with open('commonlib/consts.go', 'w') as f:
     f.write("""package commonlib
 var (
-	EndpointBaseURL = "{EndpointBaseURL}"
-	BucketRegion = "{BucketRegion}"
-	Bucket = "{Bucket}"
 	SourceLocation = "{SourceLocation}"
 )
 """.format(**vars_dict))
-
-with open('docker-secretshare-server.json.in', 'r') as f:
-    serverconf_template = f.read()
-with open('docker-secretshare-server.json', 'w') as f:
-    f.write(serverconf_template.format(**vars_dict))

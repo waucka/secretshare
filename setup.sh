@@ -379,8 +379,8 @@ echo
 echo "${step} Populate client and server config files"
 echo
 secretshare_key=$(gen_secretshare_key)
-sed -e "s!http://localhost:8080!${server_endpoint}!; s/us-west-1/${region}/; s/\"secretshare\"/${bucket}/; s!THISISABADKEY!${secretshare_key}!" vars.json.example > vars.json
-sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; s!THISISABADKEY!${secretshare_key}!; s!%AWS_ACCESS_KEY_ID%!${aws_keyid}!; s!%AWS_SECRET_ACCESS_KEY%!${aws_secret}!" secretshare-server.json.example > secretshare-server.json
+cp vars.json.example vars.json
+sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; s!THISISABADKEY!${secretshare_key}!; s!%AWS_ACCESS_KEY_ID%!${aws_keyid}!; s!%AWS_SECRET_ACCESS_KEY%!${aws_secret}!; s!%REGION%!${region}!; s!%BUCKET%!${bucket}!" secretshare-server.json.example > secretshare-server.json
 
 
 echo

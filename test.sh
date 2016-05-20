@@ -1,9 +1,9 @@
 #!/bin/bash
 
-function get_key_from_vars() {
-	grep SecretKey vars.json | cut -d\" -f4
+function get_key_from_server_config() {
+	grep secret_key secretshare-server.json | cut -d\" -f4
 	if [ "${?}" -ne 0 ]; then
-		echo >&2 "Failed to pull SecretKey out of vars.json"
+		echo >&2 "Failed to pull secret_key out of secretshare-server.json"
 		exit 1
 	fi
 }
@@ -32,11 +32,23 @@ killall secretshare-server
 ./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server.json &> test-server.log &
 server_pid=$!
 
+if [ "x$server_pid" == "x" ]; then
+    echo 'Failed to start server!'
+    exit 1
+fi
+
 sleep 2
+
+if ! ps aux | grep $server_pid; then
+    echo 'Server died unexpectedly!'
+    exit 1
+fi
 
 CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:8080 --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
 
-export SECRETSHARE_KEY=$(get_key_from_vars)
+export SECRETSHARE_KEY=$(get_key_from_server_config)
+echo "SECRETSHARE_KEY=$SECRETSHARE_KEY"
+cat secretshare-server.json
 
 version_out=$($CLIENT version)
 client_version=$(echo "$version_out" | grep '^Client version' | cut -d ':' -f 2 | cut -c 2-)

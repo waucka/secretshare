@@ -62,10 +62,10 @@ func e(format string, a ...interface{}) error {
 func loadConfig(configPath string) error {
 	configFile, err := os.Open(configPath)
 	if os.IsNotExist(err) {
-		// No file; use defaults.
-		config.EndpointBaseURL = commonlib.EndpointBaseURL
-		config.BucketRegion = commonlib.BucketRegion
-		config.Bucket = commonlib.Bucket
+		// No file; use empty strings.
+		config.EndpointBaseURL = ""
+		config.BucketRegion = ""
+		config.Bucket = ""
 		return nil
 	}
 	if err != nil {
@@ -220,8 +220,11 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to generate object ID: %s", err.Error())
 	}
 
+	//TODO: This is a horrible way to let command-line flags overwrite
+	//      config file values.
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
+	config.BucketRegion = c.Parent().String("bucket-region")
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
 	if err != nil {
@@ -337,6 +340,7 @@ func decrypt(ciphertext, key []byte) []byte {
 func recvSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
+	config.BucketRegion = c.Parent().String("bucket-region")
 	keystr := c.Args()[0]
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {

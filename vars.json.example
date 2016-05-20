@@ -1,7 +1,3 @@
 {
-    "EndpointBaseURL": "http://localhost:8080",
-    "BucketRegion": "us-west-1",
-    "Bucket": "secretshare",
-    "SecretKey": "THISISABADKEY",
     "SourceLocation": "https://github.com/waucka/secretshare"
 }

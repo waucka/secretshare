@@ -48,16 +48,18 @@ var (
 type serverConfig struct {
 	ListenAddr         string `json:"addr"`
 	ListenPort         int    `json:"port"`
+	Bucket             string `json:"bucket"`
+	BucketRegion       string `json:"bucket_region"`
 	SecretKey          string `json:"secret_key"`
 	AwsAccessKeyId     string `json:"aws_access_key_id"`
 	AwsSecretAccessKey string `json:"aws_secret_access_key"`
 }
 
-func generateSignedURL(svc *s3.S3, id, prefix string, ttl time.Duration) (string, http.Header, error) {
+func generateSignedURL(svc *s3.S3, bucket, id, prefix string, ttl time.Duration) (string, http.Header, error) {
 	s3key := prefix + id
 
 	putObjectInput := &s3.PutObjectInput{
-		Bucket:      &commonlib.Bucket,
+		Bucket:      &bucket,
 		Key:         &s3key,
 		Expires:     aws.Time(time.Now().Add(ttl)),
 		ACL:         aws.String("public-read"),
@@ -109,7 +111,7 @@ func runServer(c *cli.Context) {
 	}
 
 	sess := session.New(&aws.Config{
-		Region:      aws.String(commonlib.BucketRegion),
+		Region:      aws.String(config.BucketRegion),
 		Credentials: credentials.NewStaticCredentials(config.AwsAccessKeyId, config.AwsSecretAccessKey, ""),
 	})
 	svc := s3.New(sess)
@@ -161,7 +163,7 @@ func runServer(c *cli.Context) {
 		}
 		id := requestData.ObjectId
 
-		putURL, headers, err := generateSignedURL(svc, id, "", ttl)
+		putURL, headers, err := generateSignedURL(svc, config.Bucket, id, "", ttl)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &commonlib.ErrorResponse{
 				Message: err.Error(),
@@ -170,7 +172,7 @@ func runServer(c *cli.Context) {
 			return
 		}
 
-		metaPutURL, metaHeaders, err := generateSignedURL(svc, id, "meta/", ttl)
+		metaPutURL, metaHeaders, err := generateSignedURL(svc, config.Bucket, id, "meta/", ttl)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &commonlib.ErrorResponse{
 				Message: err.Error(),
