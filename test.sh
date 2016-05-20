@@ -29,7 +29,7 @@ if [ "x$CURRENT_ARCH" == "x" ]; then
 fi
 
 killall secretshare-server
-./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config test-server.json &> test-server.log &
+./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server.json &> test-server.log &
 server_pid=$!
 
 sleep 2
@@ -77,7 +77,7 @@ if [ "x$server_api_version" != "x2" ]; then
 fi
 
 echo -n "This is a test" > test.txt
-client_out=$($CLIENT send test.txt)
+client_out=$($CLIENT send test.txt 2>&1)
 if [ "x$?" != "x0" ]; then
     kill $server_pid
     echo "Upload failed"
@@ -89,13 +89,12 @@ rm test.txt
 echo 'Output from secretshare:' &> test-client.log
 echo -e "$client_out" > test-client.log
 key=$(echo "$client_out" | grep '^secretshare receive' | cut -d ' ' -f 3)
-$CLIENT receive "$key" &> test-client.log
+$CLIENT receive "$key" &> test-client.log 2>&1
 kill $server_pid
 
 if [ ! -f test.txt ]; then
     echo "Nothing was received!"
     echo -e "$client_out"
-    echo "ID: $id"
     echo "Key: $key"
     echo "FAIL"
     exit 1

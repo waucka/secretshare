@@ -64,8 +64,8 @@ type FileMetadata struct {
 }
 
 type ServerVersionResponse struct {
-	ServerVersion int `json:"server_version"`
-	APIVersion    int `json:"api_version"`
+	ServerVersion        int    `json:"server_version"`
+	APIVersion           int    `json:"api_version"`
 	ServerSourceLocation string `json:"server_source"`
 }
 

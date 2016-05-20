@@ -13,6 +13,14 @@ function contains() {
     return 1
 }
 
+function tempfile() {
+    if [ "$(pick_os)" == "osx" ]; then
+        mktemp -t secretshare
+    elif [ "$(pick_os)" == "linux" ]; then
+        mktemp secretshare.XXXXXXXX
+    fi
+}
+
 function missing_aws_config() {
 	echo "  You have no credentials in $HOME/.aws/config. Please enter the AWS credentials"
 	echo "  you want to use to set up the AWS user and S3 bucket that secretshare needs."
@@ -58,6 +66,34 @@ region = ${aws_region}
 EOF
 }
 
+function pick_bind_ip() {
+	echo >&2 -n "  Binding IP (default: 127.0.0.1): "
+	read bind_ip
+	if [ -z "${bind_ip}" ]; then
+		bind_ip=127.0.0.1
+	fi
+	echo "${bind_ip}"
+}
+
+function pick_bind_port() {
+	echo >&2 -n "  Binding port (default: 8080): "
+	read bind_port
+	if [ -z "${bind_port}" ]; then
+		bind_port=8080
+	fi
+	echo "${bind_port}"
+}
+
+function pick_server_endpoint() {
+	default="${1}"
+	echo >&2 -n "  The URL at which secretshare-server will be hosted (default: ${default}): "
+	read server_endpoint
+	if [ -z "${server_endpoint}" ]; then
+		server_endpoint="${default}"
+	fi
+	echo "${server_endpoint}"
+}
+
 function pick_aws_profile() {
 	echo >&2 "  Pick an AWS profile to use for initial AWS user and S3 bucket setup."
 	echo >&2
@@ -88,8 +124,8 @@ function bucket_writable() {
 	aws_profile="${1}"
 	bucket="${2}"
 	test_contents="${RANDOM}"
-	infile="$(mktemp -t secretshare)"
-	outfile="$(mktemp -t secretshare)"
+	infile="$(tempfile)"
+	outfile="$(tempfile)"
 	echo "${test_contents}" > "${infile}"
 	if ! aws --profile "${aws_profile}" s3 cp --quiet "${infile}" "s3://${bucket}/test.txt"; then
 		echo "n"
@@ -127,16 +163,20 @@ function pick_bucket() {
 
 function create_bucket() {
 	aws_profile="${1}"
+    region="${2}"
 	while [ -z "${bucket}" ]; do
 		echo >&2 -n "  New S3 bucket name: "
 		read bucket
 	done
-	aws --profile "${aws_profile}" s3api create-bucket --bucket "${bucket}" >/dev/null
+	aws --profile "${aws_profile}" s3api create-bucket --bucket "${bucket}" --region "${region}" >/dev/null
+    aws --profile "${aws_profile}" s3api put-bucket-lifecycle --bucket "${bucket}" --lifecycle-configuration '{"Rules":[{"Prefix":"/","Status":"Enabled","Expiration":{"Days":1}}]}' >/dev/null
+
 	echo "${bucket}"
 }
 
 function create_or_pick_bucket() {
 	aws_profile="${1}"
+    region="${2}"
 	while [ "${yn}" != "y" ] && [ "${yn}" != "n" ]; do
 		echo >&2 -n "  Is there already an S3 bucket with which you want to use secretshare? (y/n) "
 		read yn
@@ -146,7 +186,7 @@ function create_or_pick_bucket() {
 		echo "$(pick_bucket "${aws_profile}")"
 		return
 	fi
-	echo "$(create_bucket "${aws_profile}")"
+	echo "$(create_bucket "${aws_profile}" "${region}")"
 }
 
 function gen_secretshare_key() {
@@ -185,7 +225,7 @@ function create_iam_user() {
 	fi
 	aws --profile "${aws_profile}" iam create-user --user-name "${username}" >/dev/null
 	policy_name="secretshare-${RANDOM}-${RANDOM}"
-	policy_file=$(mktemp -t secretshare)
+	policy_file=$(tempfile)
 	cat >"${policy_file}" <<EOF
 {
     "Version": "2012-10-17",
@@ -275,7 +315,19 @@ step=0
 step=$((step+1))
 echo "${step} Create build output directories"
 echo
-./setup_build.sh
+mkdir -p build/{linux,osx,win}-amd64
+
+
+step=$((step+1))
+echo "${step} Choose the binding address and port for the secretshare server"
+echo
+echo "  You can always change this later by editing secretshare-server.json. To listen on"
+echo "  all IP addresses, choose 0.0.0.0."
+echo
+bind_ip=$(pick_bind_ip)
+bind_port=$(pick_bind_port)
+server_endpoint=$(pick_server_endpoint "http://${bind_ip}:${bind_port}")
+echo
 
 
 step=$((step+1))
@@ -297,16 +349,7 @@ step=$((step+1))
 echo
 echo "${step} Establish S3 bucket"
 echo
-bucket=$(create_or_pick_bucket "${profile}")
-
-
-step=$((step+1))
-echo
-echo "${step} Populate client and server config files"
-echo
-secretshare_key=$(gen_secretshare_key)
-sed -e "s/us-west-1/${region}/; s/secretshare/${bucket}/; s/THISISABADKEY/${secretshare_key}/" vars.json.example > vars.json
-sed -e "s/THISISABADKEY/${secretshare_key}/" test-server.json.example > test-server.json
+bucket=$(create_or_pick_bucket "${profile}" "${region}")
 
 
 step=$((step+1))
@@ -326,25 +369,24 @@ EOF
 step=$((step+1))
 echo
 echo "${step} Set up AWS credentials for secretshare user"
-echo
 secretshare_creds=$(create_or_pick_iam_user "${profile}" "${bucket}")
 aws_keyid=$(cut -d: -f1 <<<"${secretshare_creds}")
 aws_secret=$(cut -d: -f2 <<<"${secretshare_creds}")
-cat >"${HOME}/.aws/credentials.secretshare" <<EOF
-[default]
-aws_access_key_id = ${aws_keyid}
-aws_secret_access_key = ${aws_secret}
-region = ${region}
-EOF
-if [ -e "${HOME}/.aws/credentials" ] && ! [ -e "${HOME}/.aws/credentials.normal" ]; then
-	cp "${HOME}/.aws/credentials" "${HOME}/.aws/credentials.normal"
-else
-	# If this is empty, "credmgr off" will just delete the credentials file
-	touch "${HOME}/.aws/credentials.normal"
-fi
+
+
+step=$((step+1))
+echo
+echo "${step} Populate client and server config files"
+echo
+secretshare_key=$(gen_secretshare_key)
+sed -e "s!http://localhost:8080!${server_endpoint}!; s/us-west-1/${region}/; s/\"secretshare\"/${bucket}/; s!THISISABADKEY!${secretshare_key}!" vars.json.example > vars.json
+sed -e "s/0.0.0.0/${bind_ip}/; s/8080/${bind_port}/; s!THISISABADKEY!${secretshare_key}!; s!%AWS_ACCESS_KEY_ID%!${aws_keyid}!; s!%AWS_SECRET_ACCESS_KEY%!${aws_secret}!" secretshare-server.json.example > secretshare-server.json
+
 
 echo
-echo "You're ready to hack!"
+echo "Done!"
+echo
+echo "_____________ If you're hacking _____________"
 echo
 echo "The credentials with which the server will run have been written to"
 echo "~/.aws/credentials.secretshare. To start hacking on secretshare, you'll:"
@@ -362,3 +404,20 @@ echo
 echo "./credmgr off"
 echo
 echo "Go ahead. Try \"./credmgr on && source test_env && make test\"."
+echo
+echo "_____________ If you're installing for real _____________"
+echo
+echo "Your binaries are in the build directory. Copy secretshare-server to"
+echo "/usr/local/bin on the target server. Copy secretshare-server.json to"
+echo "/etc on the target server. Then start it."
+echo
+echo "Once the server is running, send out the various secretshare binaries"
+echo "(for different operating systems) to your users, along with the"
+echo "following command to initialize their setup:"
+echo
+echo "secretshare config --endpoint '${server_endpoint}' --bucket-region '${region}' --bucket '${bucket}' --auth-key '${secretshare_key}'"
+echo
+echo "After they run that command, they should be good to go."
+echo
+echo "Enjoy! And if you find any bugs or want to suggest any improvements,"
+echo "hit us up at https://github.com/secretshare."
