@@ -47,8 +47,6 @@ fi
 CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:8080 --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
 
 export SECRETSHARE_KEY=$(get_key_from_server_config)
-echo "SECRETSHARE_KEY=$SECRETSHARE_KEY"
-cat secretshare-server.json
 
 version_out=$($CLIENT version)
 client_version=$(echo "$version_out" | grep '^Client version' | cut -d ':' -f 2 | cut -c 2-)
