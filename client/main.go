@@ -348,7 +348,6 @@ func recvSecret(c *cli.Context) error {
 	}
 	id := deriveId(key)
 
-	// Download metadata
 	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s",
 		url.QueryEscape(config.BucketRegion),
 		url.QueryEscape(config.Bucket),
@@ -358,7 +357,7 @@ func recvSecret(c *cli.Context) error {
 		return e("Failed to download metadata file from S3: %s", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Failed to download file!")
+		fmt.Println("Failed to download metadata file!")
 		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
 		os.Exit(1)
 	}
