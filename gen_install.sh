@@ -16,7 +16,7 @@ if [ "x$DEPLOY_BUCKET_PATH" == "x" ]; then
 fi
 
 if [ "x$GPG_USERID" == "x" ]; then
-    echo 'Set $GPG_USERID to the userid of the GPG key  you want to sign binaries with and re-run.'
+    echo 'Set $GPG_USERID to the userid of the GPG key you want to sign binaries with and re-run.'
     exit 1
 fi
 
