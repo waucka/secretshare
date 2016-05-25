@@ -1,10 +1,5 @@
 #!/bin/sh
 
-if test "x$LATEST_VERSION" = "x"; then
-    echo 'Set $LATEST_VERSION and re-run'
-    exit 1
-fi
-
 if test "x$TARGET_OS" = "x"; then
     echo 'Set $TARGET_OS and re-run'
     exit 1
@@ -15,8 +10,8 @@ if [ "x$DEPLOY_BUCKET_REGION" == "x" ]; then
     exit 1
 fi
 
-if [ "x$DEPLOY_BUCKET" == "x" ]; then
-    echo 'Set $DEPLOY_BUCKET to the S3 bucket you want to deploy into and re-run.'
+if [ "x$DEPLOY_BUCKET_PATH" == "x" ]; then
+    echo 'Set $DEPLOY_BUCKET_PATH to the S3 bucket you want to deploy into and re-run.'
     exit 1
 fi
 
@@ -30,18 +25,22 @@ cat <<EOF
 
 echo 'I like to run random code from the Internet as root without reading it!  curl | sh 4EVAR!' > \$HOME/.i_am_a_goober
 
-URL="https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET/client/$TARGET_OS-amd64/$LATEST_VERSION/secretshare"
-
-if test -f \`which curl\`; then
-    curl -o /tmp/secretshare "\$URL"
-    curl -o /tmp/secretshare.gpg "\$URL.gpg"
-elif test -f \`which wget\`; then
-    wget -O /tmp/secretshare "\$URL"
-    wget -O /tmp/secretshare.gpg "\$URL.gpg"
-else
-    echo 'No curl or wget!  Install one of these first.'
-    exit 1
+CURLISH="curl"
+WGETISH="curl -o"
+if ! test -f \`which curl\`; then
+    if test -f \`which wget\`; then
+        CURLISH="wget -O-"
+        WGETISH="wget -O"
+    else
+        echo 'No curl or wget!  Install one of these first.'
+        exit 1
+    fi
 fi
+
+URL=\$(\$CURLISH "https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET_PATH/$TARGET_OS-amd64/latest.lnk")
+
+$WGETISH /tmp/secretshare "\$URL"
+$WGETISH /tmp/secretshare.gpg "\$URL.gpg"
 
 if which gpg; then
     if gpg --list-keys | grep '$GPG_USERID'; then
