@@ -8,6 +8,14 @@ function get_key_from_server_config() {
 	fi
 }
 
+function get_port_from_server_config() {
+	grep port secretshare-server.json | cut -d: -f2 | cut -c2- | cut -d, -f1
+	if [ "${?}" -ne 0 ]; then
+		echo >&2 "Failed to pull port out of secretshare-server.json"
+		exit 1
+	fi
+}
+
 if [ "x$TEST_BUCKET_REGION" == "x" ]; then
     echo 'Set $TEST_BUCKET_REGION to the region of the S3 bucket you will use for this test and re-run.'
     exit 1
@@ -39,12 +47,13 @@ fi
 
 sleep 2
 
-if ! ps aux | grep $server_pid; then
+if ! kill -0 $server_pid; then
     echo 'Server died unexpectedly!'
     exit 1
 fi
 
-CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:8080 --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
+PORT=$(get_port_from_server_config)
+CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:$PORT --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
 
 export SECRETSHARE_KEY=$(get_key_from_server_config)
 
