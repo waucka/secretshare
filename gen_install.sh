@@ -22,6 +22,7 @@ fi
 
 cat <<EOF
 #!/bin/sh
+{
 
 echo 'I like to run random code from the Internet as root without reading it!  curl | sh 4EVAR!' > \$HOME/.i_am_a_goober
 
@@ -61,5 +62,7 @@ sudo cp /tmp/secretshare /usr/local/bin/secretshare
 sudo chmod +x /usr/local/bin/secretshare
 
 echo 'Install complete!'
+
+}
 
 EOF
