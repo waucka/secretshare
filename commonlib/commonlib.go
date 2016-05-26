@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	APIVersion                  = 2
+	APIVersion                  = 3
 	DEBUG                       = false
 	BadBlockSizeError           = errors.New("Block size is >256?  WTF?")
 	ShortReadError              = errors.New("Read was truncated, but then read more data!  This should never happen!")

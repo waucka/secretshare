@@ -41,7 +41,7 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
-	Version           = 2 //deploy.sh:VERSION
+	Version           = 3 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 )
 

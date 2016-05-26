@@ -50,7 +50,7 @@ var (
 	config      clientConfig
 	secretKey   string
 	currentUser *user.User
-	Version     = 3 //deploy.sh:VERSION
+	Version     = 4 //deploy.sh:VERSION
 )
 
 // Returns a cli.ExitError with the given message, specified in a Printf-like way
