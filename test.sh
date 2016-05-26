@@ -1,19 +1,19 @@
 #!/bin/bash
 
-function get_key_from_server_config() {
-	grep secret_key secretshare-server.json | cut -d\" -f4
-	if [ "${?}" -ne 0 ]; then
-		echo >&2 "Failed to pull secret_key out of secretshare-server.json"
-		exit 1
-	fi
+function get_aws_key_id_from_server_config() {
+   grep aws_access_key_id secretshare-server.json | cut -d\" -f4
+   if [ "${?}" -ne 0 ]; then
+           echo >&2 "Failed to pull aws_access_key_id out of secretshare-server.json"
+           exit 1
+   fi
 }
 
-function get_port_from_server_config() {
-	grep port secretshare-server.json | cut -d: -f2 | cut -c2- | cut -d, -f1
-	if [ "${?}" -ne 0 ]; then
-		echo >&2 "Failed to pull port out of secretshare-server.json"
-		exit 1
-	fi
+function get_aws_secret_from_server_config() {
+   grep aws_secret_access_key secretshare-server.json | cut -d\" -f4
+   if [ "${?}" -ne 0 ]; then
+           echo >&2 "Failed to pull aws_secret_key_id out of secretshare-server.json"
+           exit 1
+   fi
 }
 
 if [ "x$TEST_BUCKET_REGION" == "x" ]; then
@@ -36,8 +36,30 @@ if [ "x$CURRENT_ARCH" == "x" ]; then
     exit 1
 fi
 
+if [ -z "$PORT" ]; then
+    PORT=8080
+fi
+export SECRETSHARE_KEY="TESTTESTTESTTESTTESTTESTTESTTESTTESTTEST"
+
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    AWS_ACCESS_KEY_ID=$(get_aws_key_id_from_server_config)
+    AWS_SECRET_ACCESS_KEY=$(get_aws_secret_from_server_config)
+fi
+
+cat > secretshare-server-test.json <<EOF
+{
+    "addr": "0.0.0.0",
+    "port": $PORT,
+    "bucket": "$TEST_BUCKET",
+    "bucket_region": "$TEST_BUCKET_REGION",
+    "secret_key": "$SECRETSHARE_KEY",
+    "aws_access_key_id": "$AWS_ACCESS_KEY_ID",
+    "aws_secret_access_key": "$AWS_SECRET_ACCESS_KEY"
+}
+EOF
+
 killall secretshare-server
-./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server.json &> test-server.log &
+./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server-test.json &> test-server.log &
 server_pid=$!
 
 if [ "x$server_pid" == "x" ]; then
@@ -52,10 +74,7 @@ if ! kill -0 $server_pid; then
     exit 1
 fi
 
-PORT=$(get_port_from_server_config)
 CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:$PORT --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
-
-export SECRETSHARE_KEY=$(get_key_from_server_config)
 
 version_out=$($CLIENT version)
 client_version=$(echo "$version_out" | grep '^Client version' | cut -d ':' -f 2 | cut -c 2-)

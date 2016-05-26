@@ -6,6 +6,7 @@ test-client.log
 commonlib/consts.go
 vars.json
 secretshare-server.json
+secretshare-server-test.json
 install_linux.sh
 install_osx.sh
 build
