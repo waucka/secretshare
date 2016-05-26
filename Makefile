@@ -34,6 +34,14 @@ test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/consts.go commonl
 	go test github.com/waucka/secretshare/commonlib
 	./test.sh
 
+test_linux: commonlib/crypt_test.go commonlib/commonlib.go commonlib/consts.go commonlib/encrypter.go commonlib/decrypter.go linux
+	go test github.com/waucka/secretshare/commonlib
+	./test.sh
+
+test_osx: commonlib/crypt_test.go commonlib/commonlib.go commonlib/consts.go commonlib/encrypter.go commonlib/decrypter.go osx
+	go test github.com/waucka/secretshare/commonlib
+	./test.sh
+
 deploy: linux osx windows
 	./deploy.sh
 
