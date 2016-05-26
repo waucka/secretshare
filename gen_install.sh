@@ -10,8 +10,8 @@ if [ "x$DEPLOY_BUCKET_REGION" == "x" ]; then
     exit 1
 fi
 
-if [ "x$DEPLOY_BUCKET_PATH" == "x" ]; then
-    echo 'Set $DEPLOY_BUCKET_PATH to the S3 bucket you want to deploy into and re-run.'
+if [ "x$DEPLOY_BUCKET" == "x" ]; then
+    echo 'Set $DEPLOY_BUCKET to the S3 bucket you want to deploy into and re-run.'
     exit 1
 fi
 
@@ -37,10 +37,10 @@ if ! test -f \`which curl\`; then
     fi
 fi
 
-URL=\$(\$CURLISH "https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET_PATH/$TARGET_OS-amd64/latest.lnk")
+URL=\$(\$CURLISH "https://s3-$DEPLOY_BUCKET_REGION.amazonaws.com/$DEPLOY_BUCKET/secretshare/$TARGET_OS-amd64/latest.lnk")
 
-$WGETISH /tmp/secretshare "\$URL"
-$WGETISH /tmp/secretshare.gpg "\$URL.gpg"
+\$WGETISH /tmp/secretshare "\$URL"
+\$WGETISH /tmp/secretshare.gpg "\$URL.gpg"
 
 if which gpg; then
     if gpg --list-keys | grep '$GPG_USERID'; then
