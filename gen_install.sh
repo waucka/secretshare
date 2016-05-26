@@ -24,7 +24,7 @@ cat <<EOF
 #!/bin/sh
 {
 
-echo 'I like to run random code from the Internet as root without reading it!  curl | sh 4EVAR!' > \$HOME/.i_am_a_goober
+echo 'WARNING: You should never pipe random scripts from the internet directly to your shell. Read them first!!'
 
 CURLISH="curl"
 WGETISH="curl -o"
