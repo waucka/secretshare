@@ -1,9 +1,10 @@
 <html>
   <head>
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
     <script src="js/secretshare.js"></script>
     <script>
-var secretshare = Object.create(SecretshareClient);
-alert(secretshare.checkConfig());
+var secretshare = SecretshareClient();
+console.log(secretshare.checkConfig());
     </script>
   </head>
 </html>
