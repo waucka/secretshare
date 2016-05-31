@@ -117,6 +117,7 @@ func runServer(c *cli.Context) {
 	svc := s3.New(sess)
 
 	r := gin.Default()
+	r.Static("/web", "./web")
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
 			ServerVersion:        Version,
