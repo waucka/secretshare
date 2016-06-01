@@ -248,12 +248,22 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 	if err != nil {
 		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
+
+	var reqId string
+	{
+		fmt.Println(resp.Header)
+		reqIds, exists := resp.Header["Secretshare-Reqid"]
+		if exists && len(reqIds) > 0 {
+			reqId = reqIds[0]
+		}
+	}
+
 	if resp.Body == nil {
-		return e("Empty reply received from secretshare server")
+		return e("Empty reply received from secretshare server; reqId=%s", reqId)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		return e("The secretshare server encountered an internal error")
+		return e("The secretshare server encountered an internal error; reqId=%s", reqId)
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
 		return e(`Failed to authenticate to secretshare server;
@@ -261,14 +271,16 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 This can happen when the secretshare authentication key changes. Ask your administrator
 for the right key, and then run:
 
-secretshare config --auth-key <key>`)
+secretshare config --auth-key <key>
+
+(request ID was %s)`, reqId)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
+		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded; reqId=%s", resp.StatusCode, reqId)
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return e("Error reading response from secretshare server: %s\n", err.Error())
+		return e("Error reading response from secretshare server: %s; reqId=%s", err.Error(), reqId)
 	}
 	var responseData commonlib.UploadResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
@@ -277,12 +289,14 @@ secretshare config --auth-key <key>`)
 
 Response body:
 
-%s`, err.Error(), bodyBytes)
+%s
+
+(request ID was %s)`, err.Error(), bodyBytes, reqId)
 	}
 
 	f, err := os.Open(filename)
 	if err != nil {
-		return e("Can't read file %s: %s\n", filename, err.Error())
+		return e("Can't read file %s: %s", filename, err.Error())
 	}
 	defer f.Close()
 	stream := bufio.NewReader(f)
