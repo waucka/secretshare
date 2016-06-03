@@ -52,10 +52,18 @@ type UploadResponse struct {
 	MetaHeaders http.Header `json:"meta_headers"`
 }
 
+type PingResponse struct {
+	Pong bool `json:"pong"`
+}
+
 type UploadRequest struct {
 	TTL       int    `json:"ttl"`
 	SecretKey string `json:"secret_key"`
 	ObjectId  string `json:"object_id"`
+}
+
+type PingRequest struct {
+	SecretKey string `json:"secret_key"`
 }
 
 type FileMetadata struct {

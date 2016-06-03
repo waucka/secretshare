@@ -100,6 +100,14 @@ func loadSecretKey(keyPath string) error {
 	return nil
 }
 
+func loadConfigOverrides(c *cli.Context) {
+	//TODO: This is a horrible way to let command-line flags overwrite
+	//      config file values.
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
+	config.Bucket = c.Parent().String("bucket")
+	config.BucketRegion = c.Parent().String("bucket-region")
+}
+
 func cleanUrl(url string) string {
 	if strings.HasSuffix(url, "/") {
 		return url[:len(url)-1]
@@ -129,6 +137,33 @@ func deriveId(key []byte) string {
 	sumArray := sha256.Sum256(key)
 	sumSlice := sumArray[:]
 	return commonlib.EncodeForHuman(sumSlice)
+}
+
+// Checks the validity of the API response and returns its body.
+func processApiResponse(resp *http.Response) ([]byte, error) {
+	if resp.Body == nil {
+		return []byte{}, e("Empty reply received from secretshare server")
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusInternalServerError {
+		return []byte{}, e("The secretshare server encountered an internal error")
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return []byte{}, e(`Failed to authenticate to secretshare server;
+
+This can happen when the secretshare authentication key changes. Ask your administrator
+for the right key, and then run:
+
+secretshare config --auth-key <key>`)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return []byte{}, e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
+	}
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, e("Error reading response from secretshare server: %s\n", err.Error())
+	}
+	return bodyBytes, nil
 }
 
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
@@ -202,6 +237,48 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 	}
 }
 
+func ping(c *cli.Context) error {
+	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
+	if err != nil {
+		return e(`Failed to load secret key
+
+$HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
+Try 'secretshare config --auth-key <key>' to fix this.`)
+	}
+	loadConfigOverrides(c)
+
+	requestBytes, _ := json.Marshal(&commonlib.PingRequest{
+		SecretKey: secretKey,
+	})
+	buf := bytes.NewBuffer(requestBytes)
+
+	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/ping")
+	resp, err := http.Post(config.EndpointBaseURL+"/ping", "application/json", buf)
+	if err != nil {
+		return e("Failed to connect to secretshare server: %s", err.Error())
+	}
+	bodyBytes, err := processApiResponse(resp)
+	if err != nil {
+		return err
+	}
+
+	var responseData commonlib.PingResponse
+	err = json.Unmarshal(bodyBytes, &responseData)
+	if err != nil {
+		return e(`Malformed response received from secretshare server: %s\n
+
+Response body:
+
+%s`, err.Error(), bodyBytes)
+	}
+	if !responseData.Pong {
+		return e("Received invalid ping response from secretshare server")
+	}
+
+	fmt.Println("Ping successful")
+	return nil
+}
+
 func sendSecret(c *cli.Context) error {
 	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
 	if err != nil {
@@ -210,6 +287,7 @@ func sendSecret(c *cli.Context) error {
 $HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
 Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
+	loadConfigOverrides(c)
 
 	key, keystr, err := generateKey()
 	if err != nil {
@@ -220,11 +298,6 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to generate object ID: %s", err.Error())
 	}
 
-	//TODO: This is a horrible way to let command-line flags overwrite
-	//      config file values.
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	config.BucketRegion = c.Parent().String("bucket-region")
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
 	if err != nil {
@@ -232,14 +305,11 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 	fileSize := stats.Size()
 	basename := filepath.Base(filename)
-	requestBytes, err := json.Marshal(&commonlib.UploadRequest{
+	requestBytes, _ := json.Marshal(&commonlib.UploadRequest{
 		TTL:       c.Int("ttl"),
 		SecretKey: secretKey,
 		ObjectId:  idstr,
 	})
-	if err != nil {
-		return e("Failed to open your file: %s", err.Error())
-	}
 
 	buf := bytes.NewBuffer(requestBytes)
 
@@ -248,28 +318,12 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 	if err != nil {
 		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
-	if resp.Body == nil {
-		return e("Empty reply received from secretshare server")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusInternalServerError {
-		return e("The secretshare server encountered an internal error")
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		return e(`Failed to authenticate to secretshare server;
 
-This can happen when the secretshare authentication key changes. Ask your administrator
-for the right key, and then run:
-
-secretshare config --auth-key <key>`)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	bodyBytes, err := processApiResponse(resp)
 	if err != nil {
-		return e("Error reading response from secretshare server: %s\n", err.Error())
+		return err
 	}
+
 	var responseData commonlib.UploadResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
@@ -465,27 +519,18 @@ func editConfig(c *cli.Context) error {
 }
 
 func printVersion(c *cli.Context) error {
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
+	loadConfigOverrides(c)
+
 	fmt.Printf("Client version: %d\n", Version)
 	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
 	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
+	bodyBytes, err := processApiResponse(resp)
 	if err != nil {
-		return e("Failed to connect to secretshare server: %s", err.Error())
+		return err
 	}
-	if resp.Body == nil {
-		return e("No data received from secretshare server")
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusInternalServerError {
-		return e("The secretshare server encountered an internal error")
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return e("Error reading secretshare server response: %s", err.Error())
-	}
+
 	var responseData commonlib.ServerVersionResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
@@ -564,6 +609,11 @@ func main() {
 			Name:   "version",
 			Usage:  "Print client and server version",
 			Action: printVersion,
+		},
+		{
+			Name:   "ping",
+			Usage:  "Ping the server to check config",
+			Action: ping,
 		},
 		{
 			Name:   "config",

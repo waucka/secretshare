@@ -85,6 +85,20 @@ func main() {
 	app.Run(os.Args)
 }
 
+// Determines whether the secret key passed in the request body is correct.
+//
+// If the check fails, we return an error message to the client.
+func assertSecretKey(c *gin.Context, config serverConfig, givenKey string) bool {
+	if givenKey != config.SecretKey {
+		c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
+			Message: "Incorrect secret key",
+		})
+		log.Print("401: client provided incorrect secret key")
+		return false
+	}
+	return true
+}
+
 func runServer(c *cli.Context) {
 	var config serverConfig
 	{
@@ -118,6 +132,7 @@ func runServer(c *cli.Context) {
 
 	r := gin.Default()
 	r.Static("/web", "./web")
+
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
 			ServerVersion:        Version,
@@ -125,24 +140,43 @@ func runServer(c *cli.Context) {
 			ServerSourceLocation: commonlib.SourceLocation,
 		})
 	})
-	r.POST("/upload", func(c *gin.Context) {
-		var requestData commonlib.UploadRequest
-		ttl := time.Minute * 60 * 4
-		err := c.BindJSON(&requestData)
-		if err != nil {
+
+	r.POST("/ping", func(c *gin.Context) {
+		var requestData commonlib.PingRequest
+		var err error
+
+		if err = c.BindJSON(&requestData); err != nil {
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
 				Message: err.Error(),
 			})
 			log.Print(err.Error())
 			return
 		}
-		if requestData.SecretKey != config.SecretKey {
-			c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
-				Message: "Incorrect secret key",
-			})
-			log.Print("401: client provided incorrect secret key")
+		if !assertSecretKey(c, config, requestData.SecretKey) {
 			return
 		}
+
+		c.JSON(http.StatusOK, &commonlib.PingResponse{
+			Pong: true,
+		})
+	})
+
+	r.POST("/upload", func(c *gin.Context) {
+		var requestData commonlib.UploadRequest
+		var err error
+		ttl := time.Minute * 60 * 4
+
+		if err = c.BindJSON(&requestData); err != nil {
+			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
+				Message: err.Error(),
+			})
+			log.Print(err.Error())
+			return
+		}
+		if !assertSecretKey(c, config, requestData.SecretKey) {
+			return
+		}
+
 		if requestData.TTL > 0 {
 			ttl = time.Minute * time.Duration(requestData.TTL)
 		}

@@ -114,6 +114,16 @@ if [ "x$server_api_version" != "x3" ]; then
     exit 1
 fi
 
+$CLIENT ping
+if [ "x$?" != "x0" ]; then
+	kill $server_pid
+	echo "Ping failed"
+	cat test-client.log
+	echo FAIL
+	exit 1
+fi
+
+
 echo -n "This is a test" > test.txt
 echo > test-client.log
 echo "Output from secretshare send:" >> test-client.log
