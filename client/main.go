@@ -82,6 +82,37 @@ func loadConfig(configPath string) error {
 	return nil
 }
 
+// requireConfigs() returns an error unless all the given configs are nonempty.
+func requireConfigs(configNames ...string) error {
+	missingConfigs := make([]string, 0)
+	for _, cName := range configNames {
+		var cVal string
+		switch cName {
+		case "endpoint":
+			cVal = config.EndpointBaseURL
+		case "bucket":
+			cVal = config.Bucket
+		case "bucket-region":
+			cVal = config.BucketRegion
+		default:
+			panic(fmt.Sprintf("Unknown config option '%s' required by command", cName))
+		}
+
+		if cVal == "" {
+			missingConfigs = append(missingConfigs, cName)
+		}
+	}
+
+	if len(missingConfigs) > 0 {
+		return e(`The following required options are missing from your ".secretsharerc" file:
+
+  - %s
+
+Run the "secretshare config" command from your administrator to fix this.`, strings.Join(missingConfigs, "\n  - "))
+	}
+	return nil
+}
+
 func loadSecretKey(keyPath string) error {
 	keyString := os.Getenv("SECRETSHARE_KEY")
 	if keyString != "" {
@@ -203,11 +234,17 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 }
 
 func sendSecret(c *cli.Context) error {
-	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
-	if err != nil {
+	var err error
+
+	if err = requireConfigs("endpoint", "bucket", "bucket-region"); err != nil {
+		return err
+	}
+
+	err = loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
+	if err != nil || secretKey == "" {
 		return e(`Failed to load secret key
 
-$HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
+$HOME/.secretshare.key must contain a key or $SECRETSHARE_KEY must be set.
 Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 
@@ -220,11 +257,6 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to generate object ID: %s", err.Error())
 	}
 
-	//TODO: This is a horrible way to let command-line flags overwrite
-	//      config file values.
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	config.BucketRegion = c.Parent().String("bucket-region")
 	filename := c.Args()[0]
 	stats, err := os.Stat(filename)
 	if err != nil {
@@ -251,7 +283,6 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 
 	var reqId string
 	{
-		fmt.Println(resp.Header)
 		reqIds, exists := resp.Header["Secretshare-Reqid"]
 		if exists && len(reqIds) > 0 {
 			reqId = reqIds[0]
@@ -352,9 +383,12 @@ func decrypt(ciphertext, key []byte) []byte {
 }
 
 func recvSecret(c *cli.Context) error {
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	config.BucketRegion = c.Parent().String("bucket-region")
+	var err error
+
+	if err = requireConfigs("bucket", "bucket-region"); err != nil {
+		return err
+	}
+
 	keystr := c.Args()[0]
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
@@ -371,9 +405,7 @@ func recvSecret(c *cli.Context) error {
 		return e("Failed to download metadata file from S3: %s", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Failed to download metadata file!")
-		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
-		os.Exit(1)
+		return e("Failed to download metadata file! S3 server returned status '%d'", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
