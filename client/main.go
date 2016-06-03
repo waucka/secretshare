@@ -82,6 +82,37 @@ func loadConfig(configPath string) error {
 	return nil
 }
 
+// requireConfigs() returns an error unless all the given configs are nonempty.
+func requireConfigs(configNames ...string) error {
+	missingConfigs := make([]string, 0)
+	for _, cName := range configNames {
+		var cVal string
+		switch cName {
+		case "endpoint":
+			cVal = config.EndpointBaseURL
+		case "bucket":
+			cVal = config.Bucket
+		case "bucket-region":
+			cVal = config.BucketRegion
+		default:
+			panic(fmt.Sprintf("Unknown config option '%s' required by command", cName))
+		}
+
+		if cVal == "" {
+			missingConfigs = append(missingConfigs, cName)
+		}
+	}
+
+	if len(missingConfigs) > 0 {
+		return e(`The following required options are missing from your ".secretsharerc" file:
+
+  - %s
+
+Run the "secretshare config" command from your administrator to fix this.`, strings.Join(missingConfigs, "\n  - "))
+	}
+	return nil
+}
+
 func loadSecretKey(keyPath string) error {
 	keyString := os.Getenv("SECRETSHARE_KEY")
 	if keyString != "" {
@@ -152,10 +183,12 @@ func processApiResponse(resp *http.Response) ([]byte, string, error) {
 	if resp.Body == nil {
 		return []byte{}, reqId, e("Empty reply received from secretshare server; reqId=%s", reqId)
 	}
+
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
 		return []byte{}, reqId, e("The secretshare server encountered an internal error; reqId=%s", reqId)
 	}
+
 	if resp.StatusCode == http.StatusUnauthorized {
 		return []byte{}, reqId, e(`Failed to authenticate to secretshare server;
 
@@ -166,9 +199,11 @@ secretshare config --auth-key <key>
 
 (Request ID was %s)`, reqId)
 	}
+
 	if resp.StatusCode != http.StatusOK {
 		return []byte{}, reqId, e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded; reqId=", resp.StatusCode, reqId)
 	}
+
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return []byte{}, reqId, e("Error reading response from secretshare server: %s; reqId=%s\n", err.Error(), reqId)
@@ -292,11 +327,17 @@ Response body:
 }
 
 func sendSecret(c *cli.Context) error {
-	err := loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
-	if err != nil {
+	var err error
+
+	if err = requireConfigs("endpoint", "bucket", "bucket-region"); err != nil {
+		return err
+	}
+
+	err = loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
+	if err != nil || secretKey == "" {
 		return e(`Failed to load secret key
 
-$HOME/.secretshare.key must exist or $SECRETSHARE_KEY must be set.
+$HOME/.secretshare.key must contain a key or $SECRETSHARE_KEY must be set.
 Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 	loadConfigOverrides(c)
@@ -310,7 +351,11 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to generate object ID: %s", err.Error())
 	}
 
-	filename := c.Args()[0]
+	filename := c.Args().Get(0)
+	if filename == "" || len(c.Args()) > 1 {
+		return e("USAGE: secretshare send FILENAME")
+	}
+
 	stats, err := os.Stat(filename)
 	if err != nil {
 		return e("Failed to open your file: %s", err.Error())
@@ -406,10 +451,17 @@ func decrypt(ciphertext, key []byte) []byte {
 }
 
 func recvSecret(c *cli.Context) error {
-	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
-	config.Bucket = c.Parent().String("bucket")
-	config.BucketRegion = c.Parent().String("bucket-region")
-	keystr := c.Args()[0]
+	var err error
+
+	if err = requireConfigs("bucket", "bucket-region"); err != nil {
+		return err
+	}
+
+	keystr := c.Args().Get(0)
+	if keystr == "" || len(c.Args()) > 1 {
+		return e("USAGE: secretshare receive KEY")
+	}
+
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
 		return e("Invalid secret key given on command line: %s", err.Error())
@@ -425,9 +477,7 @@ func recvSecret(c *cli.Context) error {
 		return e("Failed to download metadata file from S3: %s", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Failed to download metadata file!")
-		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
-		os.Exit(1)
+		return e("Failed to download metadata file! S3 server returned status '%d'", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
