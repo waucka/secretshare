@@ -257,7 +257,11 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to generate object ID: %s", err.Error())
 	}
 
-	filename := c.Args()[0]
+	filename := c.Args().Get(0)
+	if filename == "" || len(c.Args()) > 1 {
+		return e("USAGE: secretshare send FILENAME")
+	}
+
 	stats, err := os.Stat(filename)
 	if err != nil {
 		return e("Failed to open your file: %s", err.Error())
@@ -389,7 +393,11 @@ func recvSecret(c *cli.Context) error {
 		return err
 	}
 
-	keystr := c.Args()[0]
+	keystr := c.Args().Get(0)
+	if keystr == "" || len(c.Args()) > 1 {
+		return e("USAGE: secretshare receive KEY")
+	}
+
 	key, err := commonlib.DecodeForHuman(keystr)
 	if err != nil {
 		return e("Invalid secret key given on command line: %s", err.Error())
