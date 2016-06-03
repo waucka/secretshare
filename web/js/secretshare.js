@@ -76,8 +76,10 @@ function SecretshareClient() {
 
   // Checks the config for problems and attempts to connect to the server.
   //
-  // Returns false if there are any problems.
-  this.checkConfig = function() {
+  // In case of success, we run `successCb`, and in case of failure we run
+  // `failureCb`. In both cases, the callback is passed as its only argument
+  // the data object we received from the server.
+  this.checkConfig = function(successCb, failureCb) {
     if (this.config === undefined) {
       this.loadConfig();
     }
@@ -93,23 +95,32 @@ function SecretshareClient() {
       return true;
     }, true);
     if (!ret) {
-      return false;
+      return failureCb({});
     }
 
-    try {
-      this.apiGet("/version");
-    } catch(e) {
-      console.log(e);
-      return false;
-    }
-    return true;
+    this.apiPing(function(data) {
+      if (data.pong) {
+        return successCb(data);
+      }
+      return failureCb(data);
+    }, failureCb);
+
+    return;
   };
 
-  this.apiGet = function() {
-    $.get(
-      [this.config.endpointBaseUrl, "version"].join("/"),
-      {SecretKey: this.authKey}
-    );
+  this.apiPing = function(successCb, failureCb) {
+    this.apiCall("ping", {secret_key: this.config.authKey}, successCb, failureCb);
+  };
+
+  this.apiCall = function(uri, reqBody, successCb, failureCb) {
+    $.ajax({
+      type: "POST",
+      url: [this.config.endpointBaseUrl, uri].join("/"),
+      data: JSON.stringify(reqBody),
+      contentType: "application/json",
+      success: successCb,
+      error: failureCb
+    });
   };
 
   return this;

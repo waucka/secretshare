@@ -180,10 +180,11 @@ func runServer(c *cli.Context) {
 		var err error
 
 		if err = c.BindJSON(&requestData); err != nil {
+			errMsg := fmt.Sprintf("Failed to parse request body: %s", err.Error())
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
-				Message: err.Error(),
+				Message: errMsg,
 			})
-			logger(c).Error(err.Error())
+			logger(c).Error(errMsg)
 			return
 		}
 		if !assertSecretKey(c, config, requestData.SecretKey) {
@@ -201,10 +202,11 @@ func runServer(c *cli.Context) {
 		ttl := time.Minute * 60 * 4
 
 		if err = c.BindJSON(&requestData); err != nil {
+			errMsg := fmt.Sprintf("Failed to parse request body: %s", err.Error())
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
-				Message: err.Error(),
+				Message: errMsg,
 			})
-			logger(c).Error(err.Error())
+			logger(c).Error(errMsg)
 			return
 		}
 

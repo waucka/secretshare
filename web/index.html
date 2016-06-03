@@ -4,7 +4,14 @@
     <script src="js/secretshare.js"></script>
     <script>
 var secretshare = SecretshareClient();
-console.log(secretshare.checkConfig());
+secretshare.checkConfig(
+  function(data) {
+    console.log("Success: ", data);
+  },
+  function(data) {
+    console.log("Failure: ", data);
+  }
+);
     </script>
   </head>
 </html>
