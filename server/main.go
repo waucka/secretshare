@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
-	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -43,6 +44,8 @@ var (
 
 	Version           = 3 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
+	ReqIdChars        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	ReqIdLen          = 16
 )
 
 type serverConfig struct {
@@ -69,6 +72,35 @@ func generateSignedURL(svc *s3.S3, bucket, id, prefix string, ttl time.Duration)
 	return req.PresignRequest(time.Minute * 5)
 }
 
+// gin middleware that assigns a random request ID to each request.
+func reqIdMiddleware(c *gin.Context) {
+	var reqIdBytes []byte
+	for i := 0; i < ReqIdLen; i++ {
+		reqIdBytes = append(reqIdBytes, ReqIdChars[rand.Intn(len(ReqIdChars))])
+	}
+	reqId := string(reqIdBytes)
+	c.Set("reqId", reqId)
+	c.Header("Secretshare-ReqId", reqId)
+}
+
+// Returns a logrus entry with fields based on the gin Context.
+//
+// This adds the `reqId` field containing the request ID populated by reqIdMiddleware().
+func logger(c *gin.Context) *log.Entry {
+	reqIdIface, exists := c.Get("reqId")
+	if !exists {
+		return log.WithFields(log.Fields{})
+	}
+	reqId, ok := reqIdIface.(string)
+	if !ok {
+		log.Error("reqId is not string")
+		return log.WithFields(log.Fields{})
+	}
+	return log.WithFields(log.Fields{
+		"reqId": reqId,
+	})
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "secretshare-server"
@@ -93,7 +125,7 @@ func assertSecretKey(c *gin.Context, config serverConfig, givenKey string) bool 
 		c.JSON(http.StatusUnauthorized, &commonlib.ErrorResponse{
 			Message: "Incorrect secret key",
 		})
-		log.Print("401: client provided incorrect secret key")
+		logger(c).Error("401: client provided incorrect secret key")
 		return false
 	}
 	return true
@@ -131,6 +163,8 @@ func runServer(c *cli.Context) {
 	svc := s3.New(sess)
 
 	r := gin.Default()
+	r.Use(reqIdMiddleware)
+
 	r.Static("/web", "./web")
 
 	r.GET("/version", func(c *gin.Context) {
@@ -149,7 +183,7 @@ func runServer(c *cli.Context) {
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
 				Message: err.Error(),
 			})
-			log.Print(err.Error())
+			logger(c).Error(err.Error())
 			return
 		}
 		if !assertSecretKey(c, config, requestData.SecretKey) {
@@ -170,9 +204,10 @@ func runServer(c *cli.Context) {
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
 				Message: err.Error(),
 			})
-			log.Print(err.Error())
+			logger(c).Error(err.Error())
 			return
 		}
+
 		if !assertSecretKey(c, config, requestData.SecretKey) {
 			return
 		}
@@ -185,7 +220,7 @@ func runServer(c *cli.Context) {
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
 				Message: "No object ID provided in request",
 			})
-			log.Print("No object ID provided in request")
+			logger(c).Error("No object ID provided in request")
 			return
 		}
 		_, err = commonlib.DecodeForHuman(requestData.ObjectId)
@@ -193,17 +228,20 @@ func runServer(c *cli.Context) {
 			c.JSON(http.StatusBadRequest, &commonlib.ErrorResponse{
 				Message: "Malformed object ID provided in request",
 			})
-			log.Printf("Malformed object ID provided in request: %s\n", err.Error())
+			logger(c).Errorf("Malformed object ID provided in request: %s\n", err.Error())
 			return
 		}
 		id := requestData.ObjectId
+		logger(c).WithFields(log.Fields{
+			"objectId": id,
+		}).Info("Creating signed URL")
 
 		putURL, headers, err := generateSignedURL(svc, config.Bucket, id, "", ttl)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, &commonlib.ErrorResponse{
 				Message: err.Error(),
 			})
-			log.Print(err.Error())
+			logger(c).Error(err.Error())
 			return
 		}
 
@@ -212,7 +250,7 @@ func runServer(c *cli.Context) {
 			c.JSON(http.StatusInternalServerError, &commonlib.ErrorResponse{
 				Message: err.Error(),
 			})
-			log.Print(err.Error())
+			logger(c).Error(err.Error())
 			return
 		}
 
@@ -224,6 +262,5 @@ func runServer(c *cli.Context) {
 		})
 	})
 
-	log.Printf("Listening on %s:%d\n", config.ListenAddr, config.ListenPort)
 	r.Run(fmt.Sprintf("%s:%d", config.ListenAddr, config.ListenPort))
 }

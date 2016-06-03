@@ -139,31 +139,41 @@ func deriveId(key []byte) string {
 	return commonlib.EncodeForHuman(sumSlice)
 }
 
-// Checks the validity of the API response and returns its body.
-func processApiResponse(resp *http.Response) ([]byte, error) {
+// Checks the validity of the API response and returns its body and the request ID.
+func processApiResponse(resp *http.Response) ([]byte, string, error) {
+	var reqId string
+	{
+		reqIds, exists := resp.Header["Secretshare-Reqid"]
+		if exists && len(reqIds) > 0 {
+			reqId = reqIds[0]
+		}
+	}
+
 	if resp.Body == nil {
-		return []byte{}, e("Empty reply received from secretshare server")
+		return []byte{}, reqId, e("Empty reply received from secretshare server; reqId=%s", reqId)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		return []byte{}, e("The secretshare server encountered an internal error")
+		return []byte{}, reqId, e("The secretshare server encountered an internal error; reqId=%s", reqId)
 	}
 	if resp.StatusCode == http.StatusUnauthorized {
-		return []byte{}, e(`Failed to authenticate to secretshare server;
+		return []byte{}, reqId, e(`Failed to authenticate to secretshare server;
 
 This can happen when the secretshare authentication key changes. Ask your administrator
 for the right key, and then run:
 
-secretshare config --auth-key <key>`)
+secretshare config --auth-key <key>
+
+(Request ID was %s)`, reqId)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return []byte{}, e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded", resp.StatusCode)
+		return []byte{}, reqId, e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded; reqId=", resp.StatusCode, reqId)
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{}, e("Error reading response from secretshare server: %s\n", err.Error())
+		return []byte{}, reqId, e("Error reading response from secretshare server: %s; reqId=%s\n", err.Error(), reqId)
 	}
-	return bodyBytes, nil
+	return bodyBytes, reqId, nil
 }
 
 func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
@@ -257,7 +267,7 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 	if err != nil {
 		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
-	bodyBytes, err := processApiResponse(resp)
+	bodyBytes, reqId, err := processApiResponse(resp)
 	if err != nil {
 		return err
 	}
@@ -269,10 +279,12 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 
 Response body:
 
-%s`, err.Error(), bodyBytes)
+%s
+
+(Request ID was %s)`, err.Error(), bodyBytes, reqId)
 	}
 	if !responseData.Pong {
-		return e("Received invalid ping response from secretshare server")
+		return e("Received invalid ping response from secretshare server; reqId=%s", reqId)
 	}
 
 	fmt.Println("Ping successful")
@@ -319,7 +331,7 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		return e("Failed to connect to secretshare server: %s", err.Error())
 	}
 
-	bodyBytes, err := processApiResponse(resp)
+	bodyBytes, reqId, err := processApiResponse(resp)
 	if err != nil {
 		return err
 	}
@@ -331,12 +343,14 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 
 Response body:
 
-%s`, err.Error(), bodyBytes)
+%s
+
+(request ID was %s)`, err.Error(), bodyBytes, reqId)
 	}
 
 	f, err := os.Open(filename)
 	if err != nil {
-		return e("Can't read file %s: %s\n", filename, err.Error())
+		return e("Can't read file %s: %s", filename, err.Error())
 	}
 	defer f.Close()
 	stream := bufio.NewReader(f)
@@ -526,7 +540,7 @@ func printVersion(c *cli.Context) error {
 	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
-	bodyBytes, err := processApiResponse(resp)
+	bodyBytes, reqId, err := processApiResponse(resp)
 	if err != nil {
 		return err
 	}
@@ -538,7 +552,9 @@ func printVersion(c *cli.Context) error {
 
 Response body:
 
-%s`, err.Error(), bodyBytes)
+%s
+
+(Request ID was %s)`, err.Error(), bodyBytes, reqId)
 	}
 
 	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
@@ -546,7 +562,7 @@ Response body:
 	fmt.Printf("Server source code: %s\n", responseData.ServerSourceLocation)
 
 	if commonlib.APIVersion != responseData.APIVersion {
-		return e("WARNING! Server and client APIs do not match!  Update your client.")
+		return e("WARNING! Server and client APIs do not match!  Update your client. (reqId=%s)", reqId)
 	}
 	return nil
 }
