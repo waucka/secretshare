@@ -74,35 +74,77 @@ function SecretshareClient() {
     return true;
   };
 
+  // Parses a `secretshare config` string and stores it in a cookie.
+  //
+  // In case of success, we run `successCb`, and in case of failure we run
+  // `failureCb`. The latter receives an exception as its only argument.
+  this.setConfig = function(configCmd, successCb, failureCb) {
+    var pieces = configCmd.split(" ");
+    var config = pieces.reduce(function(prev, cur) {
+      switch (cur) {
+        case "--endpoint":
+          prev.keyToSet = "endpointBaseUrl";
+          break;
+        case "--bucket":
+          prev.keyToSet = "bucket";
+          break;
+        case "--bucket-region":
+          prev.keyToSet = "bucketRegion";
+          break;
+        case "--auth-key":
+          prev.keyToSet = "authKey";
+          break;
+        default:
+          if (prev.keyToSet !== undefined) {
+            prev[prev.keyToSet] = cur;
+          }
+          delete prev.keyToSet;
+          break;
+      }
+      return prev;
+    }, {});
+
+    var oldConfig = this.config;
+    this.config = config;
+    return this.checkConfig(
+      function(resp) {
+        docCookies.setItem("secretshareConfig", JSON.stringify(config));
+        loadConfig();
+        successCb();
+      },
+      function(resp, err) {
+        this.config = oldConfig;
+        failureCb(err);
+      },
+      config
+    );
+  }
+
   // Checks the config for problems and attempts to connect to the server.
   //
   // In case of success, we run `successCb`, and in case of failure we run
-  // `failureCb`. In both cases, the callback is passed as its only argument
-  // the data object we received from the server.
+  // `failureCb`. In both cases, the callback is passed the data object we
+  // received from the server. `failureCb` also receives an Error object.
+  //
+  // `config` may optionally be passed; otherwise we will load the config
+  // from the client's cookie.
   this.checkConfig = function(successCb, failureCb) {
-    if (this.config === undefined) {
-      this.loadConfig();
-    }
-
-    var ret = ["endpointBaseUrl", "bucket", "bucketRegion", "authKey"].reduce(function(prev, cur) {
-      if (!prev) {
-        return false;
-      }
+    var missing = ["endpointBaseUrl", "bucket", "bucketRegion", "authKey"].reduce(function(prev, cur) {
       if (!this.config.hasOwnProperty(cur)) {
-        console.log("No '" + cur + "' key in secretshareConfig cookie");
-        return false;
+        return prev.concat(cur);
       }
-      return true;
-    }, true);
-    if (!ret) {
-      return failureCb({});
+      return prev;
+    }, []);
+
+    if (missing.length !== 0) {
+      return failureCb({}, new Error("Config is missing required option(s): [" + missing.join(", ") + "]"));
     }
 
     this.apiPing(function(data) {
       if (data.pong) {
         return successCb(data);
       }
-      return failureCb(data);
+      return failureCb(data, new Error("Received improper ping response from SecretShare server"));
     }, failureCb);
 
     return;
