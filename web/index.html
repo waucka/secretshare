@@ -1,17 +1,56 @@
 <html>
   <head>
-    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+  <title>SecretShare</title>
+	<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
     <script src="js/secretshare.js"></script>
     <script>
-var secretshare = SecretshareClient();
-secretshare.checkConfig(
-  function(data) {
-    console.log("Success: ", data);
-  },
-  function(data) {
-    console.log("Failure: ", data);
-  }
-);
+		var secretshare = SecretshareClient();
+		secretshare.checkConfig(
+		  function(data) {
+		    console.log("Success: ", data);
+		  },
+		  function(data) {
+		    console.log("Failure: ", data);
+		  }
+		);
     </script>
+
+
+    <style>
+    h3 {
+    	font-family: roboto;
+    	font-weight: 500;
+    }
+
+    </style>
   </head>
+  <body>
+  <div style="text-align: center;">
+  <br />
+  <br />
+  <br />
+  <br />
+  	<img src="./img/secretshare-ui-03.png" height="80px">
+  <h3>Paste your initialization string to login</h3>
+
+  <textarea rows="4" cols="50" name="initialization string" placeholder="secretshare config --auth-key ABCDEFG... --endpoint https://... --bucket your-bucket --bucket region us-west-2"></textarea>
+
+
+  <br />
+  <br />
+<button type="button" onclick="alert('Hello world!')">Login</button>
+
+
+<br />
+<br />
+<br />
+<br />
+<div>
+  	<a href="http://www.google.com">How do I get this?</a> &nbsp; &nbsp; &nbsp; &nbsp; 
+  	<a href="https://github.com/waucka/secretshare/#secretshare" target="_blank">About SecretShare</a>
+  </div>
+
+</div>
+  </body>
 </html>
