@@ -150,6 +150,64 @@ function SecretshareClient() {
     return;
   };
 
+  // Encodes binary data for human copy/pasting.
+  this.encodeForHuman = function(bytes) {
+    var str = String.fromCharCode.apply(null, bytes);
+    var b64 = btoa(str);
+    return b64.replace("/", "_").replace("=", "");
+  };
+
+  // Generates a random encryption key.
+  //
+  // Returns the key as both an array of ints and a human-readable string.
+  this.generateKey = function() {
+    var keyBytes = new Uint8Array(32);
+    window.crypto.getRandomValues(keyBytes);
+    return [keyBytes, this.encodeForHuman(keyBytes)];
+  };
+
+  // Generates an S3 object ID corresponding to the given encryption key.
+  //
+  // `successCb` receives as its only argument the (string) object ID.
+  this.deriveId = function(keyBytes, successCb) {
+    var keyBuf = new ArrayBuffer(32);
+    var keyView = new Uint8Array(keyBuf);
+    for (var i=0; i<32; i++) {
+      keyView[i] = keyBytes[i];
+    }
+
+    var hashPromise = crypto.subtle.digest("SHA-256", keyBuf);
+    return hashPromise.then(function(hashBuf) {
+      console.log(new DataView(hashBuf).getFloat64(0));
+      var hashView = new DataView(hashBuf);
+      var hashBytes = new Uint8Array(32);
+      for (var i=0; i<32; i++) {
+        hashBytes[i] = hashView.getUint8(i);
+      }
+      var hashHuman = this.encodeForHuman(hashBytes);
+      successCb(hashHuman);
+    });
+  };
+
+  // Uploads the given file to the SecretShare server.
+  //
+  // On success, `successCb` is called with the `secretshare receive ...`
+  // string as its only argument. On failure, `failureCb` is called with
+  // an Error object as its only argument.
+  this.uploadFile = function(fileName, fileContents, successCb, failureCb) {
+    try {
+      var keyBytes, keyHuman;
+      [keyBytes, keyHuman] = this.generateKey();
+
+      this.deriveId(keyBytes, function(objId) {
+        console.log("x-bravo", objId);
+      });
+    } catch(e) {
+      return failureCb(e);
+    }
+    return successCb("secretshare receive " + keyHuman);
+  };
+
   this.apiPing = function(successCb, failureCb) {
     this.apiCall("ping", {secret_key: this.config.authKey}, successCb, failureCb);
   };
