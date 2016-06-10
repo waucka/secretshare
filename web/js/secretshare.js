@@ -178,7 +178,6 @@ function SecretshareClient() {
 
     var hashPromise = crypto.subtle.digest("SHA-256", keyBuf);
     return hashPromise.then(function(hashBuf) {
-      console.log(new DataView(hashBuf).getFloat64(0));
       var hashView = new DataView(hashBuf);
       var hashBytes = new Uint8Array(32);
       for (var i=0; i<32; i++) {
@@ -189,26 +188,70 @@ function SecretshareClient() {
     });
   };
 
+  // Uploads the file itself and the metadata file to S3.
+  this.uploadBothEncrypted = function(fileName, fileContents, putUrl, headers, metaPutUrl,
+                                      metaHeaders, successCb, failureCb) {
+    //this.uploadEncrypted(putUrl, headers, fileContents, function() {
+      var client = new XMLHttpRequest();
+      client.open('put', putUrl);
+      for (hName in headers) {
+        client.setRequestHeader(hName, headers[hName][0]);
+      };
+      client.send(fileContents);
+      client.onreadystatechange = function() {
+        if(client.readyState === XMLHttpRequest.DONE && client.status === 200) {
+          console.log("successfully uploaded!");
+          return;
+        }
+        console.log("failure");
+      };
+    //}, failureCb);
+  };
+
   // Uploads the given file to the SecretShare server.
   //
   // On success, `successCb` is called with the `secretshare receive ...`
   // string as its only argument. On failure, `failureCb` is called with
   // an Error object as its only argument.
   this.uploadFile = function(fileName, fileContents, successCb, failureCb) {
+    var keyBytes, keyHuman;
     try {
-      var keyBytes, keyHuman;
       [keyBytes, keyHuman] = this.generateKey();
-
-      this.deriveId(keyBytes, function(objId) {
-        console.log("x-bravo", objId);
-      });
     } catch(e) {
       return failureCb(e);
     }
-    return successCb("secretshare receive " + keyHuman);
+
+    var _this = this;
+    return this.deriveId(keyBytes, function(objId) {
+      console.log("objId:", objId);
+      _this.apiUpload(objId, function(data) {
+        // success callback for apiUpload
+        _this.uploadBothEncrypted(fileName, fileContents, data.put_url, data.headers,
+                                  data.meta_put_url, data.meta_headers, function() {
+          // success callback for uploadBothEncrypted
+          return successCb("secretshare receive " + keyHuman);
+        }, function(err) {
+          // failure callback for uploadBothEncrypted
+          return failureCb(err);
+        });
+      }, function(data, err) {
+        // failure callback for apiUpload
+        return failureCb(err);
+      })
+    }
+    );
+  };
+
+  this.apiUpload = function(objId, successCb, failureCb) {
+    if (this.config === undefined) { this.loadConfig() };
+    this.apiCall("upload", {
+      secret_key: this.config.authKey,
+      object_id: objId
+    }, successCb, failureCb);
   };
 
   this.apiPing = function(successCb, failureCb) {
+    if (this.config === undefined) { this.loadConfig() };
     this.apiCall("ping", {secret_key: this.config.authKey}, successCb, failureCb);
   };
 
