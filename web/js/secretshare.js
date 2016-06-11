@@ -62,6 +62,22 @@ var docCookies = {
   }
 };
 
+// Converts a JS-native string to a Uint8Array of UTF-8-encoded bytes.
+//
+// I copied this from
+// https://stackoverflow.com/questions/17191945/conversion-between-utf-8-arraybuffer-and-string
+function stringToUint(string) {
+    var string = unescape(encodeURIComponent(string)),
+        charList = string.split(''),
+        uintArray = [];
+    for (var i = 0; i < charList.length; i++) {
+        uintArray.push(charList[i].charCodeAt(0));
+    }
+    return new Uint8Array(uintArray);
+}
+
+var AESBLOCKLEN = 16;
+
 function SecretshareClient() {
   // Loads secretshare config from cookie. Returns true on success.
   this.loadConfig = function() {
@@ -154,7 +170,9 @@ function SecretshareClient() {
   this.encodeForHuman = function(bytes) {
     var str = String.fromCharCode.apply(null, bytes);
     var b64 = btoa(str);
-    return b64.replace("/", "_").replace("=", "");
+    return b64
+      .replace(new RegExp("/", "g"), "_")
+      .replace(new RegExp("=", "g"), "");
   };
 
   // Generates a random encryption key.
@@ -188,24 +206,89 @@ function SecretshareClient() {
     });
   };
 
-  // Uploads the file itself and the metadata file to S3.
-  this.uploadBothEncrypted = function(fileName, fileContents, putUrl, headers, metaPutUrl,
-                                      metaHeaders, successCb, failureCb) {
-    //this.uploadEncrypted(putUrl, headers, fileContents, function() {
-      var client = new XMLHttpRequest();
-      client.open('put', putUrl);
-      for (hName in headers) {
-        client.setRequestHeader(hName, headers[hName][0]);
-      };
-      client.send(fileContents);
-      client.onreadystatechange = function() {
-        if(client.readyState === XMLHttpRequest.DONE && client.status === 200) {
-          console.log("successfully uploaded!");
-          return;
+  // Returns the number of bytes of padding necessary for the plaintext.
+  //
+  // `SubtleCrypto.encrypt` applies padding automatically, even if the plaintext is an
+  // even multiple of the AES block length. But we need to prepend the padding to the
+  // ciphertext so that the go client can read it.
+  this.padLen = function(plaintext) {
+    if (plaintext.byteLength % AESBLOCKLEN == 0) {
+      return AESBLOCKLEN;
+    }
+    return AESBLOCKLEN - (plaintext.byteLength % AESBLOCKLEN)
+  }
+
+  // Encrypts the given plaintext in CBC mode and calls `cb` on the result.
+  //
+  // `plaintext` is expected to be an array of bytes (but not a typed array). It should
+  // have been run through preparePlaintext() already.
+  this.encrypt = function(plaintext, keyBytes, cb) {
+    var iv = new Int8Array(16);
+    window.crypto.getRandomValues(iv);
+    crypto.subtle.importKey("raw", keyBytes, "AES-CBC", false, ["encrypt"]).then(function(key) {
+      crypto.subtle.encrypt({"name": "AES-CBC", iv}, key, plaintext).then(function(enctext) {
+        var rslt = new ArrayBuffer(enctext.byteLength + AESBLOCKLEN + 1);
+        var rsltView = new Uint8Array(rslt);
+        var enctextView = new Uint8Array(enctext);
+
+        // Padding goes at the beginning (subtle.encrypt adds padding itself, even if the
+        // plaintext is an even multiple of the AES block length)
+        rsltView[0] = this.padLen(plaintext);
+        // Then the initialization vector (length of one AES block)
+        for (var i=0; i<iv.length; i++) {
+          rsltView[i+1] = iv[i];
+        };
+        // Then the ciphertext
+        for (var i=0; i<rslt.byteLength; i++) {
+          rsltView[i+AESBLOCKLEN+1] = enctextView[i];
         }
-        console.log("failure");
+
+        return cb(rslt);
+      });
+    });
+  };
+
+  // Encrypts and uploads the file using the given signed URL.
+  //
+  // `plaintext` is expected to be an array of bytes.
+  this.uploadEncrypted = function(plaintext, keyBytes, putUrl, headers, successCb, failureCb) {
+    var client = new XMLHttpRequest();
+    client.open('put', putUrl);
+    for (hName in headers) {
+      client.setRequestHeader(hName, headers[hName][0]);
+    };
+
+    this.encrypt(plaintext, keyBytes, function(encryptedData) {
+      client.send(new Uint8Array(encryptedData));
+      client.onreadystatechange = function() {
+        if (client.readyState === XMLHttpRequest.DONE) {
+          if (client.status === 200) {
+            return successCb();
+          } else {
+            return failureCb();
+          }
+        }
       };
-    //}, failureCb);
+    });
+  };
+
+  // Uploads the file itself and the metadata file to S3.
+  //
+  // `fileContents` is expected to be an array of bytes.
+  this.uploadBothEncrypted = function(fileName, fileContents, keyBytes, putUrl, headers,
+                                      metaPutUrl, metaHeaders, successCb, failureCb) {
+    this.uploadEncrypted(fileContents, keyBytes, putUrl, headers, function() {
+      var meta = {
+        "filename": fileName,
+        "filesize": fileContents.byteLength
+      };
+      // This `unescape`/`encodeURIComponent` magic converts UTF-16 to UTF-8
+      var metaStr = unescape(encodeURIComponent(JSON.stringify(meta)));
+      var metaArray = stringToUint(metaStr);
+      this.uploadEncrypted(metaArray, keyBytes, metaPutUrl, metaHeaders, function() {
+        return successCb();
+      }, failureCb);
+    }, failureCb);
   };
 
   // Uploads the given file to the SecretShare server.
@@ -213,6 +296,8 @@ function SecretshareClient() {
   // On success, `successCb` is called with the `secretshare receive ...`
   // string as its only argument. On failure, `failureCb` is called with
   // an Error object as its only argument.
+  //
+  // `fileContents` is expected to be an array of bytes.
   this.uploadFile = function(fileName, fileContents, successCb, failureCb) {
     var keyBytes, keyHuman;
     try {
@@ -220,14 +305,13 @@ function SecretshareClient() {
     } catch(e) {
       return failureCb(e);
     }
-
+    
     var _this = this;
     return this.deriveId(keyBytes, function(objId) {
-      console.log("objId:", objId);
       _this.apiUpload(objId, function(data) {
         // success callback for apiUpload
-        _this.uploadBothEncrypted(fileName, fileContents, data.put_url, data.headers,
-                                  data.meta_put_url, data.meta_headers, function() {
+        _this.uploadBothEncrypted(fileName, fileContents, keyBytes, data.put_url,
+                                  data.headers, data.meta_put_url, data.meta_headers, function() {
           // success callback for uploadBothEncrypted
           return successCb("secretshare receive " + keyHuman);
         }, function(err) {

@@ -38,7 +38,7 @@ var (
 	//
 	//   * '/' and '=' tend to introduce line breaks or breaks in text selection
 	//   * '/' is the path separator in S3
-	Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789+_").WithPadding(base64.NoPadding)
+	Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+_").WithPadding(base64.NoPadding)
 )
 
 type ErrorResponse struct {
