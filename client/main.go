@@ -21,12 +21,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	homedir "github.com/mitchellh/go-homedir"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"os/user"
 	//"net/http/httputil"
 	"path/filepath"
 	"strings"
@@ -47,10 +47,10 @@ type clientConfig struct {
 }
 
 var (
-	config      clientConfig
-	secretKey   string
-	currentUser *user.User
-	Version     = 4 //deploy.sh:VERSION
+	config    clientConfig
+	secretKey string
+	homeDir   string
+	Version   = 4 //deploy.sh:VERSION
 )
 
 // Returns a cli.ExitError with the given message, specified in a Printf-like way
@@ -243,7 +243,7 @@ func sendSecret(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = cleanUrl(c.Parent().String("bucket"))
 	config.BucketRegion = cleanUrl(c.Parent().String("bucket-region"))
-	err = loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
+	err = loadSecretKey(filepath.Join(homeDir, ".secretshare.key"))
 	if err != nil || secretKey == "" {
 		return e(`Failed to load secret key
 
@@ -503,7 +503,7 @@ func editConfig(c *cli.Context) error {
 		config.BucketRegion = c.String("bucket-region")
 	}
 	confBytes, _ := json.Marshal(&config)
-	confPath := filepath.Join(currentUser.HomeDir, ".secretsharerc")
+	confPath := filepath.Join(homeDir, ".secretsharerc")
 	err := ioutil.WriteFile(confPath, confBytes, 0600)
 	if err != nil {
 		return e("Failed to save config: %s", err.Error())
@@ -513,7 +513,7 @@ func editConfig(c *cli.Context) error {
 	// .secretshare.key
 	if c.IsSet("auth-key") {
 		psk := c.String("auth-key")
-		keyPath := filepath.Join(currentUser.HomeDir, ".secretshare.key")
+		keyPath := filepath.Join(homeDir, ".secretshare.key")
 		err = writeKey(psk, keyPath)
 		if err != nil {
 			return e("Failed to save pre-shared key: %s", err.Error())
@@ -568,13 +568,13 @@ Response body:
 
 func main() {
 	var err error
-	currentUser, err = user.Current()
+	homeDir, err = homedir.Dir()
 	if err != nil {
 		fmt.Println("Internal error")
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
-	err = loadConfig(filepath.Join(currentUser.HomeDir, ".secretsharerc"))
+	err = loadConfig(filepath.Join(homeDir, ".secretsharerc"))
 	if err != nil {
 		fmt.Println("Failed to load configuration")
 		fmt.Println(err.Error())
