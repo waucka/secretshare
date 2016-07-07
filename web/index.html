@@ -1,56 +1,68 @@
 <html>
-  <head>
+<head>
   <title>SecretShare</title>
-	<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
 
-    <script src="js/secretshare.js"></script>
-    <script>
-		var secretshare = SecretshareClient();
-		secretshare.checkConfig(
-		  function(data) {
-		    console.log("Success: ", data);
-		  },
-		  function(data) {
-		    console.log("Failure: ", data);
-		  }
-		);
+  <script src="js/secretshare.js"></script>
+  <script>
+    var secretshare = SecretshareClient();
+    secretshare.checkConfig(
+      function(data) {
+        console.log("Success: ", data);
+      },
+      function(data) {
+        console.log("Failure: ", data);
+      }
+      );
     </script>
 
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
     <style>
-    h3 {
-    	font-family: roboto;
-    	font-weight: 500;
+     .container-fluid {
+      margin: 0 auto;
+      max-width: 600px;
+      text-align: center;
     }
+  </style> 
+</head>
+<body>
 
-    </style>
-  </head>
-  <body>
-  <div style="text-align: center;">
-  <br />
-  <br />
-  <br />
-  <br />
-  	<img src="./img/secretshare-ui-03.png" height="80px">
-  <h3>Paste your initialization string to login</h3>
-
-  <textarea rows="4" cols="50" name="initialization string" placeholder="secretshare config --auth-key ABCDEFG... --endpoint https://... --bucket your-bucket --bucket region us-west-2"></textarea>
+  <div class="container">
+    <div class="container-fluid">
 
 
-  <br />
-  <br />
-<button type="button" onclick="alert('Hello world!')">Login</button>
+      <div style="padding-top: 50;"></div>
+      <img src="./img/secretshare-ui-03.png" height="80px">
+      <div style="padding-top: 20;"></div>
 
+      <p class="lead">Paste your initialization string to login</p>
+      <textarea class="form-control" rows="4" name="initialization string" placeholder="secretshare config --auth-key ABCDEFG... --endpoint https://... --bucket your-bucket --bucket region us-west-2"></textarea>
 
-<br />
-<br />
-<br />
-<br />
-<div>
-  	<a href="http://www.google.com">How do I get this?</a> &nbsp; &nbsp; &nbsp; &nbsp; 
-  	<a href="https://github.com/waucka/secretshare/#secretshare" target="_blank">About SecretShare</a>
+      <div style="padding-top: 20;"></div>
+
+      <button class="btn btn-primary btn-lg btn-block" type="button" onclick="alert('Hello world!')">Login</button>
+
+    <!-- <footer class="footer" style="text-align: center;">
+          <div class="container">
+            <a href="http://www.google.com" target="_blank" style="padding-right: 40px">How do I get this?</a> 
+            <a href="https://github.com/waucka/secretshare/#secretshare" target="_blank">About SecretShare</a>
+          </div>
+        </footer> -->
+
+    <div style="padding-top: 50;"></div>
+    <a href="http://www.google.com" target="_blank" style="padding-right: 40px">How do I get this?</a> 
+    <a href="https://github.com/waucka/secretshare/#secretshare" target="_blank">About SecretShare</a>
+    
+
   </div>
-
 </div>
-  </body>
+</body>
 </html>
