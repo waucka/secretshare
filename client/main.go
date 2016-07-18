@@ -240,6 +240,9 @@ func sendSecret(c *cli.Context) error {
 		return err
 	}
 
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
+	config.Bucket = cleanUrl(c.Parent().String("bucket"))
+	config.BucketRegion = cleanUrl(c.Parent().String("bucket-region"))
 	err = loadSecretKey(filepath.Join(currentUser.HomeDir, ".secretshare.key"))
 	if err != nil || secretKey == "" {
 		return e(`Failed to load secret key
@@ -393,6 +396,9 @@ func recvSecret(c *cli.Context) error {
 		return err
 	}
 
+	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
+	config.Bucket = cleanUrl(c.Parent().String("bucket"))
+	config.BucketRegion = cleanUrl(c.Parent().String("bucket-region"))
 	keystr := c.Args().Get(0)
 	if keystr == "" || len(c.Args()) > 1 {
 		return e("USAGE: secretshare receive KEY")
