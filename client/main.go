@@ -36,7 +36,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"github.com/waucka/secretshare/commonlib"
 )
 
