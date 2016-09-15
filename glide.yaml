@@ -9,7 +9,7 @@ import:
   - aws/credentials
   - aws/session
   - service/s3
-- package: github.com/codegangsta/cli
+- package: github.com/urfave/cli
   version: ^1.18.1
 - package: github.com/gin-gonic/gin
   version: develop
