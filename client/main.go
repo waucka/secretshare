@@ -450,7 +450,7 @@ func recvSecret(c *cli.Context) error {
 			return e("Download aborted at user request")
 		}
 	}
-	outf, err := os.Create(filemeta.Filename)
+	outf, err := os.OpenFile(filemeta.Filename, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
 	if err != nil {
 		return e("Failed to create file %s: %s\n", filemeta.Filename, err.Error())
 	}
