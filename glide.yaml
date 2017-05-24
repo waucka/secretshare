@@ -14,5 +14,6 @@ import:
 - package: github.com/gin-gonic/gin
   version: ^1.1.4
 - package: github.com/andlabs/ui
+- package: github.com/atotto/clipboard
 testImport:
 - package: gopkg.in/check.v1

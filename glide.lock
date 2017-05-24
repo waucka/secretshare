@@ -1,8 +1,10 @@
-hash: 0e026fc62d0518f0403b9440b60bbe7c6125a0b1518ff1b92c50c4196c0675fa
-updated: 2017-05-24T09:50:09.70926809-05:00
+hash: a448ab6da5cb30dd55e16a9a08cc0ee4ea0c4154f5388a35ba915aed033c0b23
+updated: 2017-05-24T13:02:46.411130668-05:00
 imports:
 - name: github.com/andlabs/ui
   version: 2dde2a79e7020f065d94d9bc17e0191bf18a5bff
+- name: github.com/atotto/clipboard
+  version: bb272b845f1112e10117e3e45ce39f690c0001ad
 - name: github.com/aws/aws-sdk-go
   version: 73b6153078ca6e3fac11a9b86c819e0f82c42aa2
   subpackages:
