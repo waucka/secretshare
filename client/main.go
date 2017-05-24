@@ -18,23 +18,15 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	homedir "github.com/mitchellh/go-homedir"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	//"net/http/httputil"
 	"path/filepath"
 	"strings"
-
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
 
 	"github.com/urfave/cli"
 	"github.com/waucka/secretshare/commonlib"
@@ -138,99 +130,9 @@ func cleanUrl(url string) string {
 	return url
 }
 
-func generateKey() ([]byte, string, error) {
-	key := make([]byte, 32)
-	num_key_bytes, err := rand.Read(key)
-	if err != nil {
-		return nil, "", err
-	}
-	if num_key_bytes < 32 {
-		return nil, "", commonlib.NotEnoughKeyRandomnessError
-	}
-	return key, commonlib.EncodeForHuman(key), nil
-}
-
 // writeKey() writes the given pre-shared key to the given file.
 func writeKey(psk, keyPath string) error {
 	return ioutil.WriteFile(keyPath, []byte(psk), 0600)
-}
-
-// deriveId() generates an S3 object ID corresponding to the given encryption key.
-func deriveId(key []byte) string {
-	sumArray := sha256.Sum256(key)
-	sumSlice := sumArray[:]
-	return commonlib.EncodeForHuman(sumSlice)
-}
-
-func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) {
-	encrypter, err := commonlib.NewEncrypter(stream, messageSize, key)
-	if err != nil {
-		fmt.Printf("Can't encrypt: %s\n", err.Error())
-		os.Exit(1)
-	}
-
-	commonlib.DEBUGPrintf("Starting upload to %s\n", putURL)
-	uploadClient := &http.Client{}
-	req, err := http.NewRequest("PUT", putURL, bufio.NewReaderSize(encrypter, 4096))
-	if err != nil {
-		fmt.Println("Internal error!")
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	headerStrings := make([]string, 0)
-	for k, v := range headers {
-		canonicalKey := http.CanonicalHeaderKey(k)
-		if len(v) == 1 {
-			commonlib.DEBUGPrintf("Adding header %s (%s): %s\n", canonicalKey, k, v)
-			req.Header.Set(canonicalKey, v[0])
-			headerStrings = append(headerStrings, fmt.Sprintf(`-H "%s: %s"`, canonicalKey, v[0]))
-		} else {
-			items, ok := req.Header[canonicalKey]
-			if ok {
-				for _, item := range v {
-					commonlib.DEBUGPrintf("Appending %s to header %s (%s)\n", item, canonicalKey, k)
-					items = append(items, item)
-				}
-				req.Header[canonicalKey] = items
-			} else {
-				commonlib.DEBUGPrintf("Adding header %s (%s): %s\n", canonicalKey, k, v[0])
-				req.Header[canonicalKey] = v
-			}
-		}
-	}
-
-	commonlib.DEBUGPrintln("All custom headers set!")
-
-	// Set Content-Length header to avoid HTTP 501 from S3.
-	// Don't bother setting it in headerStrings; curl does this on its own.
-	req.ContentLength = encrypter.TotalSize
-	commonlib.DEBUGPrintln("Content-Length set!")
-
-	/*//
-	dump, err := httputil.DumpRequestOut(req, false)
-	if err == nil {
-		commonlib.DEBUGPrintf("Request:\n")
-		commonlib.DEBUGPrintf("%q\n\n", dump)
-	} else {
-		commonlib.DEBUGPrintf("Error dumping request!\n")
-		commonlib.DEBUGPrintf("%s\n", err.Error())
-		os.Exit(1)
-	}*/
-
-	commonlib.DEBUGPrintf("Uploading %d bytes...\n", req.ContentLength)
-	resp, err := uploadClient.Do(req)
-	if err != nil {
-		fmt.Println("Error uploading file!")
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-	if resp.StatusCode != http.StatusOK {
-		commonlib.DEBUGPrintf("Failed to upload file! S3 server returned status code: %d\n", resp.StatusCode)
-		commonlib.DEBUGPrintf(`curl -XPUT -d @$FILENAME %s '%s'`, strings.Join(headerStrings, " "), putURL)
-		fmt.Println("Failed to upload file!")
-		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
-		os.Exit(1)
-	}
 }
 
 func sendSecret(c *cli.Context) error {
@@ -251,106 +153,21 @@ $HOME/.secretshare.key must contain a key or $SECRETSHARE_KEY must be set.
 Try 'secretshare config --auth-key <key>' to fix this.`)
 	}
 
-	key, keystr, err := generateKey()
-	if err != nil {
-		return e("Failed to generate encryption key: %s", err.Error())
-	}
-	idstr := deriveId(key)
-	if err != nil {
-		return e("Failed to generate object ID: %s", err.Error())
-	}
-
 	filename := c.Args().Get(0)
 	if filename == "" || len(c.Args()) > 1 {
 		return e("USAGE: secretshare send FILENAME")
 	}
 
-	stats, err := os.Stat(filename)
-	if err != nil {
-		return e("Failed to open your file: %s", err.Error())
+	keystr, idstr, senderr := commonlib.SendSecret(
+		config.EndpointBaseURL,
+		config.Bucket,
+		config.BucketRegion,
+		secretKey,
+		filename,
+		c.Int("ttl"))
+	if senderr != nil {
+		return e(senderr.Error())
 	}
-	fileSize := stats.Size()
-	basename := filepath.Base(filename)
-	requestBytes, err := json.Marshal(&commonlib.UploadRequest{
-		TTL:       c.Int("ttl"),
-		SecretKey: secretKey,
-		ObjectId:  idstr,
-	})
-	if err != nil {
-		return e("Failed to open your file: %s", err.Error())
-	}
-
-	buf := bytes.NewBuffer(requestBytes)
-
-	commonlib.DEBUGPrintf("POST %s\n", config.EndpointBaseURL+"/upload")
-	resp, err := http.Post(config.EndpointBaseURL+"/upload", "application/json", buf)
-	if err != nil {
-		return e("Failed to connect to secretshare server: %s", err.Error())
-	}
-
-	var reqId string
-	{
-		reqIds, exists := resp.Header["Secretshare-Reqid"]
-		if exists && len(reqIds) > 0 {
-			reqId = reqIds[0]
-		}
-	}
-
-	if resp.Body == nil {
-		return e("Empty reply received from secretshare server; reqId=%s", reqId)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusInternalServerError {
-		return e("The secretshare server encountered an internal error; reqId=%s", reqId)
-	}
-	if resp.StatusCode == http.StatusUnauthorized {
-		return e(`Failed to authenticate to secretshare server;
-
-This can happen when the secretshare authentication key changes. Ask your administrator
-for the right key, and then run:
-
-secretshare config --auth-key <key>
-
-(request ID was %s)`, reqId)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return e("The secretshare server responded with HTTP code %d, so the file cannot be uploaded; reqId=%s", resp.StatusCode, reqId)
-	}
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return e("Error reading response from secretshare server: %s; reqId=%s", err.Error(), reqId)
-	}
-	var responseData commonlib.UploadResponse
-	err = json.Unmarshal(bodyBytes, &responseData)
-	if err != nil {
-		return e(`Malformed response received from secretshare server: %s\n
-
-Response body:
-
-%s
-
-(request ID was %s)`, err.Error(), bodyBytes, reqId)
-	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return e("Can't read file %s: %s", filename, err.Error())
-	}
-	defer f.Close()
-	stream := bufio.NewReader(f)
-	uploadEncrypted(stream, fileSize, responseData.PutURL, responseData.Headers, key)
-
-	filemeta := commonlib.FileMetadata{
-		Filename: basename,
-		Filesize: fileSize,
-	}
-	metabytes, err := json.Marshal(filemeta)
-
-	if err != nil {
-		return e("Error marshaling file metadata: %s\n", err.Error())
-	}
-	metabuf := bytes.NewBuffer(metabytes)
-	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key)
 
 	fmt.Println("File uploaded!")
 	commonlib.DEBUGPrintf("Key: %s\n", keystr)
@@ -362,31 +179,23 @@ Response body:
 	return nil
 }
 
-func decrypt(ciphertext, key []byte) []byte {
-	paddingLen := ciphertext[0]
-	commonlib.DEBUGPrintf("decrypt: paddingLen = %d\n", paddingLen)
-	commonlib.DEBUGPrintf("decrypt: len(ciphertext) = %d\n", len(ciphertext))
-	iv := ciphertext[1 : aes.BlockSize+1]
-	raw := ciphertext[1+aes.BlockSize : len(ciphertext)]
-	commonlib.DEBUGPrintf("decrypt: len(raw) = %d\n", len(raw))
+func getyn(prompt string) (bool, error) {
+	for {
+		inreader := bufio.NewReader(os.Stdin)
+		fmt.Printf(prompt)
+		answer, err := inreader.ReadString('\n')
+		if err != nil {
+			return false, e("Error reading user input: %s", err.Error())
+		}
 
-	if len(raw)%aes.BlockSize != 0 {
-		fmt.Println("Data is malformed!")
-		fmt.Printf("Detail: length is %d, which is not a multiple of %d\n", len(raw), aes.BlockSize)
-		os.Exit(1)
+		if answer == "y\n" || answer == "Y\n" {
+			return true, nil
+		} else if answer == "n\n" || answer == "N\n" {
+			return false, nil
+		} else {
+			fmt.Println("Please answer Y or N")
+		}
 	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		fmt.Println("Internal error!")
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-
-	decrypter := cipher.NewCBCDecrypter(block, iv)
-	decrypter.CryptBlocks(raw, raw)
-	// Discard padding
-	return raw[:len(raw)-int(paddingLen)]
 }
 
 func recvSecret(c *cli.Context) error {
@@ -408,79 +217,32 @@ func recvSecret(c *cli.Context) error {
 	if err != nil {
 		return e("Invalid secret key given on command line: %s", err.Error())
 	}
-	id := deriveId(key)
 
-	resp, err := http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/meta/%s",
-		url.QueryEscape(config.BucketRegion),
-		url.QueryEscape(config.Bucket),
-		url.QueryEscape(id),
-	))
+	cwd, err := os.Getwd()
 	if err != nil {
-		return e("Failed to download metadata file from S3: %s", err.Error())
-	}
-	if resp.StatusCode != http.StatusOK {
-		return e("Failed to download metadata file! S3 server returned status '%d'", resp.StatusCode)
+		return e("Could not determine current directory: %s", err.Error())
 	}
 
-	defer resp.Body.Close()
-	metabytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return e("Failed to read metadata from S3: %s", err.Error())
-	}
-	realMeta := decrypt(metabytes, key)
-
-	var filemeta commonlib.FileMetadata
-	err = json.Unmarshal(realMeta, &filemeta)
-	if err != nil {
-		return e("Received malformed metadata from S3: %s", err.Error())
-	}
-
-	// This is how you check if a file exists in Go.  Yep.
-	if _, err := os.Stat(filemeta.Filename); err == nil {
-		inreader := bufio.NewReader(os.Stdin)
-		fmt.Printf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
-		answer, err := inreader.ReadString('\n')
+	filemeta, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, false)
+	if recverr != nil && recverr.Code == commonlib.RecvFileExists {
+		// If the code is RecvFileExists, then filemeta will be non-nil.
+		prompt := fmt.Sprintf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
+		overwrite, err := getyn(prompt)
 		if err != nil {
-			return e("Error reading user input: %s", err.Error())
+			return e(err.Error())
 		}
-
-		if answer == "y\n" || answer == "Y\n" {
+		if overwrite {
 			os.Remove(filemeta.Filename)
+			filemeta, recverr = commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, true)
 		} else {
 			return e("Download aborted at user request")
 		}
 	}
-	outf, err := os.OpenFile(filemeta.Filename, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
-	if err != nil {
-		return e("Failed to create file %s: %s\n", filemeta.Filename, err.Error())
-	}
-	defer outf.Close()
 
-	// Download data
-	resp, err = http.Get(fmt.Sprintf("https://s3-%s.amazonaws.com/%s/%s",
-		url.QueryEscape(config.BucketRegion),
-		url.QueryEscape(config.Bucket),
-		url.QueryEscape(id),
-	))
-	if err != nil {
-		return e("Failed to download file from S3: %s", err.Error())
-	}
-	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Failed to download file!")
-		fmt.Printf("S3 server returned status '%d'\n", resp.StatusCode)
-		os.Exit(1)
+	if recverr != nil {
+		return e(recverr.Error())
 	}
 
-	defer resp.Body.Close()
-	decrypter, err := commonlib.NewDecrypter(resp.Body, filemeta.Filesize, key)
-	if err != nil {
-		return e("Failed to initiate decryption: %s", err.Error())
-	}
-	bytesWritten, err := io.Copy(outf, decrypter)
-	commonlib.DEBUGPrintf("Wrote %d bytes\n", bytesWritten)
-	if err != nil {
-		return e("Failed to save decrypted file: %s", err.Error())
-	}
 	fmt.Printf("File downloaded as %s\n", filemeta.Filename)
 	return nil
 }
