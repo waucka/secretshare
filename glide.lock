@@ -1,6 +1,8 @@
 hash: 0e026fc62d0518f0403b9440b60bbe7c6125a0b1518ff1b92c50c4196c0675fa
 updated: 2017-05-24T09:50:09.70926809-05:00
 imports:
+- name: github.com/andlabs/ui
+  version: 2dde2a79e7020f065d94d9bc17e0191bf18a5bff
 - name: github.com/aws/aws-sdk-go
   version: 73b6153078ca6e3fac11a9b86c819e0f82c42aa2
   subpackages:
