@@ -361,6 +361,83 @@ func recvUi(parent *ui.Window, keystr string, andthen afterFunc) {
 	andthen(nil)
 }
 
+func makeFormField(labelText, dataText string) (*ui.Entry, *ui.Box) {
+	label := ui.NewLabel(labelText)
+	dataField := ui.NewEntry()
+	dataField.SetText(dataText)
+
+	box := ui.NewHorizontalBox()
+	box.Append(label, false)
+	box.Append(dataField, true)
+
+	return dataField, box
+}
+
+func configureUi(parent *ui.Window, andthen afterFunc) {
+	window := ui.NewWindow("Configure secretshare", 400, 100, false)
+	mainbox := ui.NewVerticalBox()
+
+	// Ignore errors; the keyfile and configs might not have been created yet.
+	_ = loadSecretKey(filepath.Join(homeDir, ".secretshare.key"))
+	_ = requireConfigs("endpoint", "bucket", "bucket-region")
+
+	endpointField, endpointBox := makeFormField("Endpoint URL", config.EndpointBaseURL)
+	mainbox.Append(endpointBox, true)
+	bucketRegionField, bucketRegionBox := makeFormField("Bucket Region", config.BucketRegion)
+	mainbox.Append(bucketRegionBox, true)
+	bucketField, bucketBox := makeFormField("Bucket", config.Bucket)
+	mainbox.Append(bucketBox, true)
+	pskField, pskBox := makeFormField("Secret Key", secretKey)
+	mainbox.Append(pskBox, true)
+
+	okButton := ui.NewButton("OK")
+	okButton.OnClicked(func(*ui.Button) {
+		config.EndpointBaseURL = endpointField.Text()
+		config.BucketRegion = bucketRegionField.Text()
+		config.Bucket = bucketField.Text()
+		secretKey = pskField.Text()
+
+		// .secretsharerc
+		confBytes, _ := json.Marshal(&config)
+		confPath := filepath.Join(homeDir, ".secretsharerc")
+		err := ioutil.WriteFile(confPath, confBytes, 0600)
+		if err != nil {
+			ui.MsgBoxError(window, "Error!", fmt.Sprintf("Failed to save config: %s", err.Error()))
+			return
+		}
+
+		// .secretshare.key
+		if secretKey != "" {
+			keyPath := filepath.Join(homeDir, ".secretshare.key")
+			err = writeKey(secretKey, keyPath)
+			if err != nil {
+				ui.MsgBoxError(window, "Error!", fmt.Sprintf("Failed to save pre-shared key: %s", err.Error()))
+				return
+			}
+		}
+
+		andthen(nil)
+		window.Destroy()
+	})
+	cancelButton := ui.NewButton("Cancel")
+	cancelButton.OnClicked(func(*ui.Button) {
+		andthen(ErrNoEntry)
+		window.Destroy()
+	})
+	buttonsbox := ui.NewHorizontalBox()
+	buttonsbox.Append(cancelButton, false)
+	buttonsbox.Append(okButton, false)
+
+	mainbox.Append(buttonsbox, false)
+
+	window.SetChild(mainbox)
+	window.OnClosing(func(*ui.Window) bool {
+		andthen(ErrNoEntry)
+		return true
+	})
+	window.Show()
+}
+
 func uimain() {
 	window := ui.NewWindow("secretshare", 200, 100, false)
 
@@ -393,6 +470,16 @@ func uimain() {
 			}
 		})
 	})
+	configureButton := ui.NewButton("Configure")
+	configureButton.OnClicked(func(*ui.Button) {
+		configureButton.Disable()
+		configureUi(window, func(configureErr error) {
+			if configureErr != nil {
+				ui.MsgBoxError(window, "Error saving config!", configureErr.Error())
+			}
+			configureButton.Enable()
+		})
+	})
 	quitButton := ui.NewButton("Quit")
 	quitButton.OnClicked(func(*ui.Button) {
 		window.Destroy()
@@ -402,6 +489,7 @@ func uimain() {
 	mainbox := ui.NewVerticalBox()
 	mainbox.Append(sendButton, false)
 	mainbox.Append(recvButton, false)
+	mainbox.Append(configureButton, false)
 	mainbox.Append(quitButton, false)
 
 	window.SetChild(mainbox)
