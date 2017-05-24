@@ -223,7 +223,15 @@ func recvSecret(c *cli.Context) error {
 		return e("Could not determine current directory: %s", err.Error())
 	}
 
-	filemeta, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, false)
+	var newName *string
+	outputStr := c.String("output")
+	if outputStr != "" {
+		newName = &outputStr
+	} else {
+		newName = nil
+	}
+
+	filemeta, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, false)
 	if recverr != nil && recverr.Code == commonlib.RecvFileExists {
 		// If the code is RecvFileExists, then filemeta will be non-nil.
 		prompt := fmt.Sprintf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
@@ -233,7 +241,7 @@ func recvSecret(c *cli.Context) error {
 		}
 		if overwrite {
 			os.Remove(filemeta.Filename)
-			filemeta, recverr = commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, true)
+			filemeta, recverr = commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, true)
 		} else {
 			return e("Download aborted at user request")
 		}
@@ -381,6 +389,13 @@ func main() {
 			Name:   "receive",
 			Usage:  "Receive a secret file",
 			Action: recvSecret,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name: "output, o",
+					Value: "",
+					Usage: "File to write to (defaults to sender's filename)",
+				},
+			},
 		},
 		{
 			Name:   "version",
