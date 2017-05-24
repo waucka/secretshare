@@ -114,6 +114,7 @@ if [ "x$server_api_version" != "x3" ]; then
     exit 1
 fi
 
+echo "Test receive with sender's name"
 echo -n "This is a test" > test.txt
 echo > test-client.log
 echo "Output from secretshare send:" >> test-client.log
@@ -131,23 +132,67 @@ key=$(grep '^secretshare receive' test-client.log | cut -d ' ' -f 3)
 echo >> test-client.log
 echo 'Output from secretshare receive:' >> test-client.log
 $CLIENT receive "$key" >> test-client.log 2>&1
-kill $server_pid
 
 if [ ! -f test.txt ]; then
     echo "Nothing was received!"
     echo -e "$client_out"
     echo "Key: $key"
     echo "FAIL"
+    kill $server_pid
     exit 1
 fi
 
 contents=$(cat test.txt)
 
-if [ "x$contents" == "xThis is a test" ]; then
-    echo "PASS"
-    rm test.txt
-    exit 0
+if [ "x$contents" != "xThis is a test" ]; then
+    echo "FAIL"
+    kill $server_pid
+    exit 1
 fi
 
-echo "FAIL"
-exit 1
+echo "PASS"
+rm test.txt
+
+
+echo 'Test receive with different name'
+echo -n "This is a test" > test.txt
+echo > test-client.log
+echo "Output from secretshare send:" >> test-client.log
+$CLIENT send test.txt >> test-client.log 2>&1
+if [ "x$?" != "x0" ]; then
+    kill $server_pid
+    echo "Upload failed"
+    cat test-client.log
+    echo "FAIL"
+    exit 1
+fi
+key=$(grep '^secretshare receive' test-client.log | cut -d ' ' -f 3)
+rm test.txt
+
+echo >> test-client.log
+echo 'Output from secretshare receive:' >> test-client.log
+$CLIENT receive -o test2.txt "$key" >> test-client.log 2>&1
+
+if [ ! -f test2.txt ]; then
+    echo "Nothing was received!"
+    echo -e "$client_out"
+    echo "Key: $key"
+    echo "FAIL"
+    kill $server_pid
+    exit 1
+fi
+
+contents=$(cat test2.txt)
+
+if [ "x$contents" != "xThis is a test" ]; then
+    echo "FAIL"
+    kill $server_pid
+    exit 1
+fi
+
+echo "PASS"
+rm test2.txt
+
+
+kill $server_pid
+exit 0

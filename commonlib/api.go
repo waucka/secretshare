@@ -274,7 +274,7 @@ func makeRecvError(code RecvErrorType, formatString string, args ...interface{})
 	}
 }
 
-func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, overwrite bool) (*FileMetadata, *RecvError) {
+func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName *string, overwrite bool) (*FileMetadata, *RecvError) {
 	var err error
 
 	id := deriveId(key)
@@ -307,7 +307,11 @@ func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, overwri
 		return nil, makeRecvError(MalformedMetadata, "Received malformed metadata from S3: %s", err.Error())
 	}
 
-	filePath := filepath.Join(destDir, filemeta.Filename)
+	filename := filemeta.Filename
+	if newName != nil {
+		filename = *newName
+	}
+	filePath := filepath.Join(destDir, filename)
 
 	// This is how you check if a file exists in Go.  Yep.
 	if _, err := os.Stat(filePath); err == nil {
