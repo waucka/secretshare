@@ -12,6 +12,6 @@ import:
 - package: github.com/urfave/cli
   version: ^1.18.1
 - package: github.com/gin-gonic/gin
-  version: develop
+  version: ^1.1.4
 testImport:
 - package: gopkg.in/check.v1
