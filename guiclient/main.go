@@ -30,6 +30,7 @@ import (
 
 	"github.com/andlabs/ui"
 	"github.com/atotto/clipboard"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/waucka/secretshare/commonlib"
 )
 
@@ -134,44 +135,54 @@ func writeKey(psk, keyPath string) error {
 	return ioutil.WriteFile(keyPath, []byte(psk), 0600)
 }
 
-func printVersion() error {
-	fmt.Printf("Client version: %d\n", Version)
-	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
-	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
+type versionInfo struct {
+	ClientVersion int
+	ClientApiVersion int
+	ClientSourceLocation string
+	ServerVersion int
+	ServerApiVersion int
+	ServerSourceLocation string
+}
+
+func fetchVersionInfo() (*versionInfo, error) {
+	info := &versionInfo{
+		ClientVersion: Version,
+		ClientApiVersion: commonlib.APIVersion,
+		ClientSourceLocation: commonlib.SourceLocation,
+		ServerVersion: -1,
+		ServerApiVersion: -1,
+		ServerSourceLocation: "ERROR",
+	}
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
-		return e("Failed to connect to secretshare server: %s", err.Error())
+		return info, e("Failed to connect to secretshare server: %s", err.Error())
 	}
 	if resp.Body == nil {
-		return e("No data received from secretshare server")
+		return info, e("No data received from secretshare server")
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusInternalServerError {
-		return e("The secretshare server encountered an internal error")
+		return info, e("The secretshare server encountered an internal error")
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return e("Error reading secretshare server response: %s", err.Error())
+		return info, e("Error reading secretshare server response: %s", err.Error())
 	}
 	var responseData commonlib.ServerVersionResponse
 	err = json.Unmarshal(bodyBytes, &responseData)
 	if err != nil {
-		return e(`Malformed response received from secretshare server: %s\n
-
-Response body:
-
-%s`, err.Error(), bodyBytes)
+		return info, e("Malformed response received from secretshare server: %s", err.Error())
 	}
 
-	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
-	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
-	fmt.Printf("Server source code: %s\n", responseData.ServerSourceLocation)
+	info.ServerVersion = responseData.ServerVersion
+	info.ServerApiVersion = responseData.APIVersion
+	info.ServerSourceLocation = responseData.ServerSourceLocation
 
 	if commonlib.APIVersion != responseData.APIVersion {
-		return e("WARNING! Server and client APIs do not match!  Update your client.")
+		return info, e("WARNING! Server and client APIs do not match!  Update your client.")
 	}
-	return nil
+	return info, nil
 }
 
 func alertBox(title, text string, fatal bool, andthen afterFunc) {
@@ -507,6 +518,74 @@ func configureUi(parent *ui.Window, andthen afterFunc) {
 	window.Show()
 }
 
+func makeLabelPair(textLeft, textRight string) *ui.Box {
+	leftLabel := ui.NewLabel(textLeft)
+	rightLabel := ui.NewLabel(textRight)
+
+	hbox := ui.NewHorizontalBox()
+	hbox.Append(leftLabel, false)
+	hbox.Append(rightLabel, true)
+
+	return hbox
+}
+
+func aboutUi(parent *ui.Window, andthen afterFunc) {
+	window := ui.NewWindow("Configure secretshare", 400, 100, false)
+	mainbox := ui.NewVerticalBox()
+
+	info, fetcherr := fetchVersionInfo()
+	infoLabel := ui.NewLabel(`secretshare
+Copyright © 2016  Alexander Wauck
+License: AGPLv3
+`)
+	mainbox.Append(infoLabel, true)
+
+	clientVersion := makeLabelPair("Client Version:", fmt.Sprintf("%d", info.ClientVersion))
+	mainbox.Append(clientVersion, true)
+	clientApiVersion := makeLabelPair("Client API Version:", fmt.Sprintf("%d", info.ClientApiVersion))
+	mainbox.Append(clientApiVersion, true)
+	clientSource := makeLabelPair("Client Source Code:", info.ClientSourceLocation)
+	clientSourceDownload := ui.NewButton("Download")
+	clientSourceDownload.OnClicked(func(*ui.Button) {
+		open.Run(info.ClientSourceLocation)
+	})
+	clientSource.Append(clientSourceDownload, false)
+	mainbox.Append(clientSource, true)
+
+	serverVersion := makeLabelPair("Server Version:", fmt.Sprintf("%d", info.ServerVersion))
+	mainbox.Append(serverVersion, true)
+	serverApiVersion := makeLabelPair("Server API Version:", fmt.Sprintf("%d", info.ServerApiVersion))
+	mainbox.Append(serverApiVersion, true)
+	serverSource := makeLabelPair("Server Source Code:", info.ServerSourceLocation)
+	serverSourceDownload := ui.NewButton("Download")
+	serverSourceDownload.OnClicked(func(*ui.Button) {
+		open.Run(info.ServerSourceLocation)
+	})
+	if fetcherr != nil {
+		serverSourceDownload.Disable()
+	}
+	serverSource.Append(serverSourceDownload, false)
+	mainbox.Append(serverSource, true)
+
+	okButton := ui.NewButton("OK")
+	okButton.OnClicked(func(*ui.Button) {
+		andthen(nil)
+		window.Destroy()
+	})
+	mainbox.Append(okButton, false)
+
+	window.SetChild(mainbox)
+	window.OnClosing(func(*ui.Window) bool {
+		andthen(nil)
+		return true
+	})
+	window.Show()
+
+	if fetcherr != nil {
+		ui.MsgBoxError(window, "Error!", fetcherr.Error())
+	}
+}
+
 func uimain() {
 	window := ui.NewWindow("secretshare", 200, 100, false)
 
@@ -549,6 +628,13 @@ func uimain() {
 			configureButton.Enable()
 		})
 	})
+	aboutButton := ui.NewButton("About")
+	aboutButton.OnClicked(func(*ui.Button) {
+		aboutButton.Disable()
+		aboutUi(window, func(error) {
+			aboutButton.Enable()
+		})
+	})
 	quitButton := ui.NewButton("Quit")
 	quitButton.OnClicked(func(*ui.Button) {
 		window.Destroy()
@@ -559,6 +645,7 @@ func uimain() {
 	mainbox.Append(sendButton, false)
 	mainbox.Append(recvButton, false)
 	mainbox.Append(configureButton, false)
+	mainbox.Append(aboutButton, false)
 	mainbox.Append(quitButton, false)
 
 	window.SetChild(mainbox)
