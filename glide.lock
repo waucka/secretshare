@@ -1,8 +1,12 @@
-hash: 0e026fc62d0518f0403b9440b60bbe7c6125a0b1518ff1b92c50c4196c0675fa
-updated: 2017-05-24T09:50:09.70926809-05:00
+hash: 82f6dea031917a18a30da7d43a6c97a0ab9bd9b16f36707da6048a4456faa3d4
+updated: 2017-05-25T12:43:07.417331178-05:00
 imports:
+- name: github.com/andlabs/ui
+  version: 2dde2a79e7020f065d94d9bc17e0191bf18a5bff
+- name: github.com/atotto/clipboard
+  version: bb272b845f1112e10117e3e45ce39f690c0001ad
 - name: github.com/aws/aws-sdk-go
-  version: 73b6153078ca6e3fac11a9b86c819e0f82c42aa2
+  version: e8177d9867544fa4677f40ceb470e60b6f3573ae
   subpackages:
   - aws
   - aws/awserr
@@ -49,6 +53,10 @@ imports:
   version: b8bc1bf767474819792c23f32d8286a45736f1c6
 - name: github.com/Sirupsen/logrus
   version: 5e5dc898656f695e2a086b8e12559febbfc01562
+- name: github.com/skratchdot/open-golang
+  version: 75fb7ed4208cf72d323d7d02fd1a5964a7a9073c
+  subpackages:
+  - open
 - name: github.com/urfave/cli
   version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
 - name: golang.org/x/net

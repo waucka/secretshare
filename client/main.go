@@ -164,7 +164,8 @@ Try 'secretshare config --auth-key <key>' to fix this.`)
 		config.BucketRegion,
 		secretKey,
 		filename,
-		c.Int("ttl"))
+		c.Int("ttl"),
+		nil)
 	if senderr != nil {
 		return e(senderr.Error())
 	}
@@ -231,7 +232,7 @@ func recvSecret(c *cli.Context) error {
 		newName = nil
 	}
 
-	filemeta, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, false)
+	filemeta, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, false, nil)
 	if recverr != nil && recverr.Code == commonlib.RecvFileExists {
 		// If the code is RecvFileExists, then filemeta will be non-nil.
 		prompt := fmt.Sprintf("File %s already exists!  Overwrite (y/n)? ", filemeta.Filename)
@@ -241,7 +242,7 @@ func recvSecret(c *cli.Context) error {
 		}
 		if overwrite {
 			os.Remove(filemeta.Filename)
-			filemeta, recverr = commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, true)
+			filemeta, recverr = commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, cwd, newName, true, nil)
 		} else {
 			return e("Download aborted at user request")
 		}

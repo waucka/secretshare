@@ -32,8 +32,13 @@ func generateKey() ([]byte, string, error) {
 	return key, EncodeForHuman(key), nil
 }
 
-func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte) error {
-	encrypter, err := NewEncrypter(stream, messageSize, key)
+type ProgressRecord struct {
+	Value int64
+	Total int64
+}
+
+func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers http.Header, key []byte, progressChan chan *ProgressRecord) error {
+	encrypter, err := NewEncrypter(stream, messageSize, key, progressChan)
 	if err != nil {
 		return err
 	}
@@ -126,8 +131,13 @@ func makeSendError(code SendErrorType, formatString string, args ...interface{})
 	}
 }
 
-func SendSecret(endpoint, bucket, bucketRegion, secretKey, filePath string, ttl int) (string, string, *SendError) {
+func SendSecret(endpoint, bucket, bucketRegion, secretKey, filePath string, ttl int, progressChan chan *ProgressRecord) (string, string, *SendError) {
 	var err error
+	if progressChan != nil {
+		defer func(){
+			close(progressChan)
+		}()
+	}
 
 	key, keystr, err := generateKey()
 	if err != nil {
@@ -201,7 +211,7 @@ Response body:
 	}
 	defer f.Close()
 	stream := bufio.NewReader(f)
-	uploadEncrypted(stream, fileSize, responseData.PutURL, responseData.Headers, key)
+	uploadEncrypted(stream, fileSize, responseData.PutURL, responseData.Headers, key, progressChan)
 
 	filemeta := FileMetadata{
 		Filename: basename,
@@ -213,7 +223,7 @@ Response body:
 		return "", "", makeSendError(UniverseFailed, "Failed to create JSON for file metadata?  What?  %s\n", err.Error())
 	}
 	metabuf := bytes.NewBuffer(metabytes)
-	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key)
+	uploadEncrypted(metabuf, int64(len(metabytes)), responseData.MetaPutURL, responseData.MetaHeaders, key, nil)
 
 	return keystr, idstr, nil
 }
@@ -274,8 +284,13 @@ func makeRecvError(code RecvErrorType, formatString string, args ...interface{})
 	}
 }
 
-func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName *string, overwrite bool) (*FileMetadata, *RecvError) {
+func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName *string, overwrite bool, progressChan chan *ProgressRecord) (*FileMetadata, *RecvError) {
 	var err error
+	if progressChan != nil {
+		defer func(){
+			close(progressChan)
+		}()
+	}
 
 	id := deriveId(key)
 
@@ -341,7 +356,7 @@ func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName
 	}
 
 	defer resp.Body.Close()
-	decrypter, err := NewDecrypter(resp.Body, filemeta.Filesize, key)
+	decrypter, err := NewDecrypter(resp.Body, filemeta.Filesize, key, progressChan)
 	if err != nil {
 		return nil, makeRecvError(DecryptionFailed, "Failed to initiate decryption: %s", err.Error())
 	}

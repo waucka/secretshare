@@ -36,10 +36,12 @@ type Encrypter struct {
 	paddingLen       byte
 	nextBlock        []byte
 	blockPos         int
+	bytesWritten     int64
 	TotalSize        int64
+	progressChan     chan *ProgressRecord
 }
 
-func NewEncrypter(stream io.Reader, messageSize int64, key []byte) (*Encrypter, error) {
+func NewEncrypter(stream io.Reader, messageSize int64, key []byte, progressChan chan *ProgressRecord) (*Encrypter, error) {
 	paddingLen := messageSize % aes.BlockSize
 	DEBUGPrintf("Encrypter: Number of bytes in last block: %d\n", paddingLen)
 	if paddingLen > 0 {
@@ -78,7 +80,9 @@ func NewEncrypter(stream io.Reader, messageSize int64, key []byte) (*Encrypter, 
 		paddingLen:       byte(paddingLen),
 		nextBlock:        nil,
 		blockPos:         0,
+		bytesWritten:     0,
 		TotalSize:        messageSize + int64(len(headerData)) + int64(paddingLen),
+		progressChan:     progressChan,
 	}, nil
 }
 
@@ -131,7 +135,16 @@ func (self *Encrypter) readBlock() error {
 
 func (self *Encrypter) Read(p []byte) (int, error) {
 	var eof error = nil
-	bytesWritten := 0
+	var bytesWritten int = 0
+	defer func(){
+		if self.progressChan != nil {
+			self.bytesWritten += int64(bytesWritten)
+			self.progressChan <- &ProgressRecord{
+				Value: self.bytesWritten,
+				Total: self.TotalSize,
+			}
+		}
+	}()
 
 	if !self.headerWritten {
 		if len(p) < len(self.headerData) {
