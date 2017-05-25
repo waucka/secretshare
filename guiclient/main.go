@@ -234,6 +234,25 @@ func copyBox(title, label, text string, andthen afterFunc) {
 	window.Show()
 }
 
+func progressBox(title, label string) (*ui.ProgressBar, *ui.Window) {
+	window := ui.NewWindow(title, 400, 100, false)
+
+	desc := ui.NewLabel(label)
+	progress := ui.NewProgressBar()
+
+	mainbox := ui.NewVerticalBox()
+	mainbox.Append(desc, true)
+	mainbox.Append(progress, true)
+
+	window.SetChild(mainbox)
+	window.OnClosing(func(*ui.Window) bool {
+		return true
+	})
+	window.Show()
+
+	return progress, window
+}
+
 type entryFunc func(string, error)
 var ErrNoEntry = errors.New("No text entered!")
 
@@ -317,20 +336,47 @@ func sendUi(parent *ui.Window, andthen afterFunc) {
 		return
 	}
 
-	keystr, _, senderr := commonlib.SendSecret(
-		config.EndpointBaseURL,
-		config.Bucket,
-		config.BucketRegion,
-		secretKey,
-		filePath,
-		4 * 60)
-	if senderr != nil {
-		defer andthen(senderr)
-		return
-	}
+	progressChan := make(chan *commonlib.ProgressRecord, 100)
+	keystrChan := make(chan string)
+	senderrChan := make(chan *commonlib.SendError)
 
-	copyBox("Success!", "Key to receive this secret", keystr, nil)
-	andthen(nil)
+	go func() {
+		innerkeystr, _, innersenderr := commonlib.SendSecret(
+			config.EndpointBaseURL,
+			config.Bucket,
+			config.BucketRegion,
+			secretKey,
+			filePath,
+			4 * 60,
+			progressChan)
+		keystrChan <- innerkeystr
+		senderrChan <- innersenderr
+	}()
+	pbar, pbox := progressBox("Progress", "Uploading file...")
+	go func() {
+		for prec := range progressChan {
+			ui.QueueMain(func() {
+				fraction := float64(prec.Value) / float64(prec.Total)
+				percent := int(fraction * 100)
+				pbar.SetValue(percent)
+			})
+		}
+
+		ui.QueueMain(func() {
+			pbox.Destroy()
+		})
+		keystr, senderr := <-keystrChan, <-senderrChan
+
+		ui.QueueMain(func() {
+			if senderr != nil {
+				andthen(senderr)
+				return
+			}
+
+			copyBox("Success!", "Key to receive this secret", keystr, nil)
+			defer andthen(nil)
+		})
+	}()
 }
 
 func recvUi(parent *ui.Window, keystr string, andthen afterFunc) {
@@ -351,14 +397,37 @@ func recvUi(parent *ui.Window, keystr string, andthen afterFunc) {
 	destDir := filepath.Dir(savePath)
 	filename := filepath.Base(savePath)
 
-	_, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, destDir, &filename, true)
-	if recverr != nil {
-		defer andthen(recverr)
-		return
-	}
+	progressChan := make(chan *commonlib.ProgressRecord, 100)
+	recverrChan := make(chan *commonlib.RecvError)
+	go func() {
+		_, recverr := commonlib.RecvSecret(config.Bucket, config.BucketRegion, key, destDir, &filename, true, progressChan)
+		recverrChan <- recverr
+	}()
+	pbar, pbox := progressBox("Progress", "Downloading file...")
+	go func() {
+		for prec := range progressChan {
+			ui.QueueMain(func() {
+				fraction := float64(prec.Value) / float64(prec.Total)
+				percent := int(fraction * 100)
+				pbar.SetValue(percent)
+			})
+		}
 
-	ui.MsgBox(parent, "Success!", fmt.Sprintf("File downloaded as %s\n", savePath))
-	andthen(nil)
+		ui.QueueMain(func() {
+			pbox.Destroy()
+		})
+		recverr := <-recverrChan
+
+		ui.QueueMain(func() {
+			if recverr != nil {
+				defer andthen(recverr)
+				return
+			}
+
+			ui.MsgBox(parent, "Success!", fmt.Sprintf("File downloaded as %s\n", savePath))
+			defer andthen(nil)
+		})
+	}()
 }
 
 func makeFormField(labelText, dataText string) (*ui.Entry, *ui.Box) {

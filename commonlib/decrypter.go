@@ -34,9 +34,10 @@ type Decrypter struct {
 	blockPos         int
 	messageSize      int64
 	totalRead        int64
+	progressChan     chan *ProgressRecord
 }
 
-func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, error) {
+func NewDecrypter(stream io.Reader, messageSize int64, key []byte, progressChan chan *ProgressRecord) (*Decrypter, error) {
 	paddingLen := messageSize % aes.BlockSize
 	DEBUGPrintf("Decrypter: Number of bytes in last block: %d\n", paddingLen)
 	if paddingLen > 0 {
@@ -74,6 +75,7 @@ func NewDecrypter(stream io.Reader, messageSize int64, key []byte) (*Decrypter, 
 		blockPos:         0,
 		messageSize:      messageSize,
 		totalRead:        0,
+		progressChan:     progressChan,
 	}
 	err = decrypter.readBlock()
 	if err != nil && err != io.EOF {
@@ -127,10 +129,16 @@ func (self *Decrypter) readBlock() error {
 
 func (self *Decrypter) Read(p []byte) (int, error) {
 	var eof error = nil
-	bytesWritten := 0
+	var bytesWritten int = 0
 	defer func() {
 		if bytesWritten == 0 {
 			self.nextBlock = nil
+		}
+		if self.progressChan != nil {
+			self.progressChan <- &ProgressRecord{
+				Value: self.totalRead,
+				Total: self.messageSize,
+			}
 		}
 	}()
 

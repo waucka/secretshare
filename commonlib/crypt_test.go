@@ -45,9 +45,9 @@ func checkRoundTrip(c *C, size int64) {
 	c.Assert(int64(bytesRead), Equals, size)
 
 	stream := bytes.NewBuffer(randBytes)
-	encrypter, err := NewEncrypter(stream, size, key)
+	encrypter, err := NewEncrypter(stream, size, key, nil)
 	c.Assert(err, IsNil)
-	decrypter, err := NewDecrypter(encrypter, size, key)
+	decrypter, err := NewDecrypter(encrypter, size, key, nil)
 	c.Assert(err, IsNil)
 	afterBytes, err := ioutil.ReadAll(decrypter)
 	c.Assert(err, IsNil)
@@ -66,9 +66,9 @@ func checkBufRoundTrip(c *C, size int64, bufsize int) {
 	c.Assert(int64(bytesRead), Equals, size)
 
 	stream := bytes.NewBuffer(randBytes)
-	encrypter, err := NewEncrypter(stream, size, key)
+	encrypter, err := NewEncrypter(stream, size, key, nil)
 	c.Assert(err, IsNil)
-	decrypter, err := NewDecrypter(bufio.NewReaderSize(encrypter, bufsize), size, key)
+	decrypter, err := NewDecrypter(bufio.NewReaderSize(encrypter, bufsize), size, key, nil)
 	c.Assert(err, IsNil)
 	afterBytes, err := ioutil.ReadAll(decrypter)
 	c.Assert(err, IsNil)
