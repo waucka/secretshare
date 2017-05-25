@@ -15,3 +15,6 @@ docker-secretshare-server.json
 test.txt
 test_env
 vendor
+packaging/secretshare.app
+assets/secretshare.iconset
+assets/secretshare.icns
