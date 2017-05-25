@@ -545,35 +545,40 @@ License: AGPLv3
 	mainbox.Append(clientVersion, true)
 	clientApiVersion := makeLabelPair("Client API Version:", fmt.Sprintf("%d", info.ClientApiVersion))
 	mainbox.Append(clientApiVersion, true)
-	clientSource := makeLabelPair("Client Source Code:", info.ClientSourceLocation)
-	clientSourceDownload := ui.NewButton("Download")
-	clientSourceDownload.OnClicked(func(*ui.Button) {
-		open.Run(info.ClientSourceLocation)
-	})
-	clientSource.Append(clientSourceDownload, false)
-	mainbox.Append(clientSource, true)
 
 	serverVersion := makeLabelPair("Server Version:", fmt.Sprintf("%d", info.ServerVersion))
 	mainbox.Append(serverVersion, true)
 	serverApiVersion := makeLabelPair("Server API Version:", fmt.Sprintf("%d", info.ServerApiVersion))
 	mainbox.Append(serverApiVersion, true)
-	serverSource := makeLabelPair("Server Source Code:", info.ServerSourceLocation)
-	serverSourceDownload := ui.NewButton("Download")
+
+	dlbox := ui.NewHorizontalBox()
+	clientSourceDownload := ui.NewButton("Download Client Source Code")
+	clientSourceDownload.OnClicked(func(*ui.Button) {
+		open.Run(info.ClientSourceLocation)
+	})
+	dlbox.Append(clientSourceDownload, false)
+
+	dlbox.Append(ui.NewLabel(""), true)
+
+	serverSourceDownload := ui.NewButton("Download Server Source Code")
 	serverSourceDownload.OnClicked(func(*ui.Button) {
 		open.Run(info.ServerSourceLocation)
 	})
 	if fetcherr != nil {
 		serverSourceDownload.Disable()
 	}
-	serverSource.Append(serverSourceDownload, false)
-	mainbox.Append(serverSource, true)
+	dlbox.Append(serverSourceDownload, false)
+	mainbox.Append(dlbox, true)
 
-	okButton := ui.NewButton("OK")
+	okBox := ui.NewHorizontalBox()
+	okBox.Append(ui.NewLabel(""), true)
+	okButton := ui.NewButton("Close")
 	okButton.OnClicked(func(*ui.Button) {
 		andthen(nil)
 		window.Destroy()
 	})
-	mainbox.Append(okButton, false)
+	okBox.Append(okButton, false)
+	mainbox.Append(okBox, false)
 
 	window.SetChild(mainbox)
 	window.OnClosing(func(*ui.Window) bool {
