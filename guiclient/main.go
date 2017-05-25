@@ -520,7 +520,7 @@ func configureUi(parent *ui.Window, andthen afterFunc) {
 }
 
 func aboutUi(parent *ui.Window, andthen afterFunc) {
-	window := ui.NewWindow("Configure secretshare", 400, 100, false)
+	window := ui.NewWindow("About secretshare", 400, 100, false)
 	mainbox := ui.NewVerticalBox()
 
 	info, fetcherr := fetchVersionInfo()
