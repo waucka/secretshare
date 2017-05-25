@@ -331,7 +331,8 @@ type afterFunc func(error)
 func sendUi(parent *ui.Window, andthen afterFunc) {
 	filePath := ui.OpenFile(parent)
 	if filePath == "" {
-		andthen(nil)
+		defer andthen(nil)
+		return
 	}
 
 	var err error
@@ -622,7 +623,7 @@ func uimain() {
 	configureButton.OnClicked(func(*ui.Button) {
 		configureButton.Disable()
 		configureUi(window, func(configureErr error) {
-			if configureErr != nil {
+			if configureErr != nil && configureErr != ErrNoEntry {
 				ui.MsgBoxError(window, "Error saving config!", configureErr.Error())
 			}
 			configureButton.Enable()
