@@ -519,37 +519,27 @@ func configureUi(parent *ui.Window, andthen afterFunc) {
 	window.Show()
 }
 
-func makeLabelPair(textLeft, textRight string) *ui.Box {
-	leftLabel := ui.NewLabel(textLeft)
-	rightLabel := ui.NewLabel(textRight)
-
-	hbox := ui.NewHorizontalBox()
-	hbox.Append(leftLabel, false)
-	hbox.Append(rightLabel, true)
-
-	return hbox
-}
-
 func aboutUi(parent *ui.Window, andthen afterFunc) {
 	window := ui.NewWindow("Configure secretshare", 400, 100, false)
 	mainbox := ui.NewVerticalBox()
 
 	info, fetcherr := fetchVersionInfo()
-	infoLabel := ui.NewLabel(`secretshare
+	infoLabel := ui.NewLabel(fmt.Sprintf(`secretshare
 Copyright © 2016  Alexander Wauck
 License: AGPLv3
-`)
-	mainbox.Append(infoLabel, true)
 
-	clientVersion := makeLabelPair("Client Version:", fmt.Sprintf("%d", info.ClientVersion))
-	mainbox.Append(clientVersion, true)
-	clientApiVersion := makeLabelPair("Client API Version:", fmt.Sprintf("%d", info.ClientApiVersion))
-	mainbox.Append(clientApiVersion, true)
+Client Version: %d
+Server Version: %d
 
-	serverVersion := makeLabelPair("Server Version:", fmt.Sprintf("%d", info.ServerVersion))
-	mainbox.Append(serverVersion, true)
-	serverApiVersion := makeLabelPair("Server API Version:", fmt.Sprintf("%d", info.ServerApiVersion))
-	mainbox.Append(serverApiVersion, true)
+Client API Version: %d
+Server API Version: %d
+`,
+		info.ClientVersion,
+		info.ServerVersion,
+		info.ClientApiVersion,
+		info.ServerApiVersion,
+	))
+	mainbox.Append(infoLabel, false)
 
 	dlbox := ui.NewHorizontalBox()
 	clientSourceDownload := ui.NewButton("Download Client Source Code")
@@ -578,7 +568,7 @@ License: AGPLv3
 		window.Destroy()
 	})
 	okBox.Append(okButton, false)
-	mainbox.Append(okBox, false)
+	mainbox.Append(okBox, true)
 
 	window.SetChild(mainbox)
 	window.OnClosing(func(*ui.Window) bool {
