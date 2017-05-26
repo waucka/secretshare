@@ -59,10 +59,17 @@ assets/secretshare.icns: assets/secretshare.iconset/icon_128@2x.png assets/secre
 	iconutil -c icns -o assets/secretshare.icns assets/secretshare.iconset
 
 packaging/secretshare.app: assets/secretshare.icns gen_bundle.py build/osx-amd64/secretshare-gui
-	rm -rf packaging/secretshare.app
+	rm -rf $@
 	./gen_bundle.py secretshare secretshare-gui com.github.waucka.secretshare secretshare secretshare.icns 4
 
-mac_bundle: packaging/secretshare.app
+assets/secretshare_dmg_background.png: assets/secretshare_dmg_background.svg
+	rsvg-convert -w 640 -h 480 $< -o $@
+
+packaging/secretshare.dmg: packaging/secretshare.app assets/secretshare_dmg_background.png assets/secretshare.icns
+	rm -f $@
+	appdmg dmgspec.json packaging/secretshare.dmg
+
+mac_bundle: packaging/secretshare.dmg
 
 # Windows Build
 build/win-amd64/secretshare-server.exe: server/main.go commonlib/commonlib.go commonlib/consts.go

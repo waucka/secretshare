@@ -1,0 +1,10 @@
+{
+    "title": "secretshare",
+    "background": "assets/secretshare_dmg_background.png",
+    "icon": "assets/secretshare.icns",
+    "icon-size": 80,
+    "contents": [
+	{ "x": 192, "y": 144, "type": "file", "path": "packaging/secretshare.app" },
+	{ "x": 448, "y": 144, "type": "link", "path": "/Applications" }
+    ]
+}

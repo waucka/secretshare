@@ -16,5 +16,7 @@ test.txt
 test_env
 vendor
 packaging/secretshare.app
+packaging/secretshare.dmg
 assets/secretshare.iconset
 assets/secretshare.icns
+assets/secretshare_dmg_background.png
