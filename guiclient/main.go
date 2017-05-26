@@ -48,7 +48,7 @@ var (
 	config    clientConfig
 	secretKey string
 	homeDir   string
-	Version   = 4 //deploy.sh:VERSION
+	Version   = 5
 )
 
 func loadConfig(configPath string) error {

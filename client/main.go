@@ -42,7 +42,7 @@ var (
 	config    clientConfig
 	secretKey string
 	homeDir   string
-	Version   = 4 //deploy.sh:VERSION
+	Version   = 5
 )
 
 // Returns a cli.ExitError with the given message, specified in a Printf-like way
