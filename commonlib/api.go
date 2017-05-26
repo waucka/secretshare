@@ -103,6 +103,7 @@ func uploadEncrypted(stream io.Reader, messageSize int64, putURL string, headers
 }
 
 type SendErrorType int
+
 const (
 	MetadataUploadFailed SendErrorType = iota
 	ConnectionFailed
@@ -117,7 +118,7 @@ const (
 
 type SendError struct {
 	Message string
-	Code SendErrorType
+	Code    SendErrorType
 }
 
 func (self *SendError) Error() string {
@@ -127,14 +128,14 @@ func (self *SendError) Error() string {
 func makeSendError(code SendErrorType, formatString string, args ...interface{}) *SendError {
 	return &SendError{
 		Message: fmt.Sprintf(formatString, args...),
-		Code: code,
+		Code:    code,
 	}
 }
 
 func SendSecret(endpoint, bucket, bucketRegion, secretKey, filePath string, ttl int, progressChan chan *ProgressRecord) (string, string, *SendError) {
 	var err error
 	if progressChan != nil {
-		defer func(){
+		defer func() {
 			close(progressChan)
 		}()
 	}
@@ -259,6 +260,7 @@ func deriveId(key []byte) string {
 }
 
 type RecvErrorType int
+
 const (
 	MetadataDownloadFailed RecvErrorType = iota
 	MalformedMetadata
@@ -270,7 +272,7 @@ const (
 
 type RecvError struct {
 	Message string
-	Code RecvErrorType
+	Code    RecvErrorType
 }
 
 func (self *RecvError) Error() string {
@@ -280,14 +282,14 @@ func (self *RecvError) Error() string {
 func makeRecvError(code RecvErrorType, formatString string, args ...interface{}) *RecvError {
 	return &RecvError{
 		Message: fmt.Sprintf(formatString, args...),
-		Code: code,
+		Code:    code,
 	}
 }
 
 func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName *string, overwrite bool, progressChan chan *ProgressRecord) (*FileMetadata, *RecvError) {
 	var err error
 	if progressChan != nil {
-		defer func(){
+		defer func() {
 			close(progressChan)
 		}()
 	}
@@ -336,7 +338,7 @@ func RecvSecret(bucket, bucketRegion string, key []byte, destDir string, newName
 			os.Remove(filePath)
 		}
 	}
-	outf, err := os.OpenFile(filePath, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
+	outf, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return nil, makeRecvError(RecvCreateFailed, "Failed to create file %s: %s\n", filePath, err.Error())
 	}

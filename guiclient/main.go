@@ -24,9 +24,9 @@ import (
 	"net/http"
 	"os"
 	//"net/http/httputil"
+	"errors"
 	"path/filepath"
 	"strings"
-	"errors"
 
 	"github.com/andlabs/ui"
 	"github.com/atotto/clipboard"
@@ -136,21 +136,21 @@ func writeKey(psk, keyPath string) error {
 }
 
 type versionInfo struct {
-	ClientVersion int
-	ClientApiVersion int
+	ClientVersion        int
+	ClientApiVersion     int
 	ClientSourceLocation string
-	ServerVersion int
-	ServerApiVersion int
+	ServerVersion        int
+	ServerApiVersion     int
 	ServerSourceLocation string
 }
 
 func fetchVersionInfo() (*versionInfo, error) {
 	info := &versionInfo{
-		ClientVersion: Version,
-		ClientApiVersion: commonlib.APIVersion,
+		ClientVersion:        Version,
+		ClientApiVersion:     commonlib.APIVersion,
 		ClientSourceLocation: commonlib.SourceLocation,
-		ServerVersion: -1,
-		ServerApiVersion: -1,
+		ServerVersion:        -1,
+		ServerApiVersion:     -1,
 		ServerSourceLocation: "ERROR",
 	}
 
@@ -265,6 +265,7 @@ func progressBox(title, label string) (*ui.ProgressBar, *ui.Window) {
 }
 
 type entryFunc func(string, error)
+
 var ErrNoEntry = errors.New("No text entered!")
 
 func entryBox(title, promptText string, andthen entryFunc) {
@@ -307,7 +308,7 @@ func entryBox(title, promptText string, andthen entryFunc) {
 	window.Show()
 }
 
-func errmain(problem string , loaderr error) {
+func errmain(problem string, loaderr error) {
 	alertBox(problem, loaderr.Error(), true, nil)
 }
 
@@ -359,7 +360,7 @@ func sendUi(parent *ui.Window, andthen afterFunc) {
 			config.BucketRegion,
 			secretKey,
 			filePath,
-			4 * 60,
+			4*60,
 			progressChan)
 		keystrChan <- innerkeystr
 		senderrChan <- innersenderr

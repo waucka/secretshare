@@ -392,7 +392,7 @@ func main() {
 			Action: recvSecret,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name: "output, o",
+					Name:  "output, o",
 					Value: "",
 					Usage: "File to write to (defaults to sender's filename)",
 				},

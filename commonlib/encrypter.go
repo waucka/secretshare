@@ -136,7 +136,7 @@ func (self *Encrypter) readBlock() error {
 func (self *Encrypter) Read(p []byte) (int, error) {
 	var eof error = nil
 	var bytesWritten int = 0
-	defer func(){
+	defer func() {
 		if self.progressChan != nil {
 			self.bytesWritten += int64(bytesWritten)
 			self.progressChan <- &ProgressRecord{
