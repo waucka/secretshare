@@ -17,6 +17,8 @@ test_env
 vendor
 packaging/secretshare.app
 packaging/secretshare.dmg
+packaging/gopath
+packaging/secretshare*.tar.gz
 assets/secretshare.iconset
 assets/secretshare.icns
 assets/secretshare_dmg_background.png
