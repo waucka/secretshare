@@ -5,6 +5,16 @@ COMMON_CLIENT_DEPS=commonlib/commonlib.go commonlib/encrypter.go commonlib/decry
 CLI_CLIENT_DEPS=client/main.go $(COMMON_CLIENT_DEPS)
 GUI_CLIENT_DEPS=guiclient/main.go $(COMMON_CLIENT_DEPS)
 
+LINUX_BIN_DIR          = $(DESTDIR)/usr/bin
+LINUX_SYSTEMD_UNIT_DIR = $(DESTDIR)/lib/systemd/system
+LINUX_APPS_DIR         = $(DESTDIR)/usr/share/applications
+LINUX_ICONS_DIR        = $(DESTDIR)/usr/share/icons/hicolor
+
+LINUX_INSTALL_OWNERSHIP = -o root -g root
+LINUX_MAKE_DIR = install -p -d $(LINUX_INSTALL_OWNERSHIP) -m 755
+LINUX_INST_FILE = install -c $(LINUX_INSTALL_OWNERSHIP) -m 644
+LINUX_INST_PROG = install -c $(LINUX_INSTALL_OWNERSHIP) -m 755 -s
+
 all: linux osx windows
 
 linux: build/linux-amd64/secretshare-server build/linux-amd64/secretshare build/linux-amd64/secretshare-gui
@@ -33,6 +43,28 @@ build/linux-amd64/secretshare: $(CLI_CLIENT_DEPS) build/linux-amd64
 
 build/linux-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
+
+# We only depend on secretshare.icns to ensure that the individual PNGs are built.
+# Lazy?  Yep!  Effective?  You bet!
+install-linux: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui assets/secretshare.icns
+	$(LINUX_MAKE_DIR) $(LINUX_BIN_DIR)
+	$(LINUX_INST_PROG) build/linux-amd64/secretshare-server $(LINUX_BIN_DIR)/secretshare-server
+	$(LINUX_INST_PROG) build/linux-amd64/secretshare $(LINUX_BIN_DIR)/secretshare
+	$(LINUX_INST_PROG) build/linux-amd64/secretshare-gui $(LINUX_BIN_DIR)/secretshare-gui
+	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/16x16/apps
+	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/32x32/apps
+	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/64x64/apps
+	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/128x128/apps
+	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/scalable/apps
+	$(LINUX_INST_FILE) assets/secretshare.iconset/icon_16x16.png $(LINUX_ICONS_DIR)/16x16/apps/secretshare.png
+	$(LINUX_INST_FILE) assets/secretshare.iconset/icon_32x32.png $(LINUX_ICONS_DIR)/32x32/apps/secretshare.png
+	$(LINUX_INST_FILE) assets/secretshare.iconset/icon_64x64.png $(LINUX_ICONS_DIR)/64x64/apps/secretshare.png
+	$(LINUX_INST_FILE) assets/secretshare.iconset/icon_128x128.png $(LINUX_ICONS_DIR)/128x128/apps/secretshare.png
+	$(LINUX_INST_FILE) assets/secretshare.svg $(LINUX_ICONS_DIR)/scalable/apps/secretshare.svg
+	$(LINUX_MAKE_DIR) $(LINUX_APPS_DIR)
+	$(LINUX_INST_FILE) secretshare-gui.desktop $(LINUX_APPS_DIR)/secretshare-gui.desktop
+	$(LINUX_MAKE_DIR) $(LINUX_SYSTEMD_UNIT_DIR)
+	$(LINUX_INST_FILE) secretshare-server.service $(LINUX_SYSTEMD_UNIT_DIR)/secretshare-server.service
 
 # OS X Build
 build/osx-amd64/secretshare-server: $(SERVER_DEPS) build/osx-amd64
@@ -118,4 +150,4 @@ clean:
 	rm -rf packaging/secretshare.app
 	rm -rf assets/secretshare.iconset
 
-.PHONY: all test clean deploy linux osx windows mac_bundle
+.PHONY: all test clean deploy linux osx windows linux-install mac_bundle
