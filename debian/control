@@ -1,0 +1,30 @@
+Source: secretshare
+Section: utils
+Priority: optional
+Maintainer: Alexander Wauck <alex@impulse101.org>
+Build-Depends: debhelper (>= 7),
+	       golang-go (>= 1.7),
+	       build-essential
+Standards-Version: 3.9.8
+Homepage: https://github.com/waucka/secretshare
+Vcs-Browser: https://github.com/waucka/secretshare
+Vcs-Git: https://github.com/waucka/secretshare.git
+
+Package: secretshare-server
+Architecture: any
+Depends: libc6
+Description: secretshare lets you share secret data securely and easily.
+ This package is the server component.
+
+Package: secretshare-cli
+Architecture: any
+Depends: libc6
+Description: secretshare lets you share secret data securely and easily.
+ This package is the command-line interface.
+
+Package: secretshare-gui
+Architecture: any
+Depends: libc6,
+	 libgtk-3-0 (>= 3.10.0)
+Description: secretshare lets you share secret data securely and easily.
+ This package is the graphical interface.

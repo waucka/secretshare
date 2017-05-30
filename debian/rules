@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+ # Stamp Rules
+build-stamp:
+	$(checkdir)
+	-rm -f build-stamp
+	$(MAKE) native
+	touch build-stamp
+
+build: build-stamp
+
+clean:
+	dh_testdir
+	dh_testroot
+	-rm -f build-stamp
+	$(MAKE) clean
+	dh_clean
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+	$(MAKE) install-linux DESTDIR=$(DESTDIR)
+
+binary-indep: build install
+
+binary-arch: build install
+	dh_testdir
+	dh_testroot
+	dh_installchangelogs
+	dh_installdocs
+	dh_installexamples
+	dh_install
+	dh_installman
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	dh_gencontrol
+	dh_md5sums
+	dh_builddeb
+
+binary: binary-indep binary-arch
+
+.PHONY: binary binary-arch binary-indep clean build
