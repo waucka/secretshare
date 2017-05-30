@@ -1,6 +1,7 @@
 SECRETSHARE_VERSION=1.0
 COMMIT_ID=$(shell git rev-parse HEAD)
 GOBUILD=go build -ldflags "-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID)"
+GOPATH=$(shell pwd)/packaging/gopath
 SERVER_DEPS=server/main.go commonlib/commonlib.go
 COMMON_CLIENT_DEPS=commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
 CLI_CLIENT_DEPS=client/main.go $(COMMON_CLIENT_DEPS)
@@ -53,14 +54,20 @@ build/linux-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 # For packaging
-build/native/secretshare-server: $(SERVER_DEPS) build/native
-	$(GOBUILD) -o $@ github.com/waucka/secretshare/server
+$(GOPATH)/src/github.com/waucka:
+	mkdir -p $@
 
-build/native/secretshare: $(CLI_CLIENT_DEPS) build/native
-	$(GOBUILD) -o $@ github.com/waucka/secretshare/client
+$(GOPATH)/src/github.com/waucka/secretshare: $(GOPATH)/src/github.com/waucka
+	ln -s $(shell pwd) $(GOPATH)/src/github.com/waucka/secretshare
 
-build/native/secretshare-gui: $(GUI_CLIENT_DEPS) build/native
-	$(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
+build/native/secretshare-server: $(SERVER_DEPS) build/native $(GOPATH)/src/github.com/waucka/secretshare
+	GOPATH=$(GOPATH) $(GOBUILD) -o $@ github.com/waucka/secretshare/server
+
+build/native/secretshare: $(CLI_CLIENT_DEPS) build/native $(GOPATH)/src/github.com/waucka/secretshare
+	GOPATH=$(GOPATH) $(GOBUILD) -o $@ github.com/waucka/secretshare/client
+
+build/native/secretshare-gui: $(GUI_CLIENT_DEPS) build/native $(GOPATH)/src/github.com/waucka/secretshare
+	GOPATH=$(GOPATH) $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 # We only depend on secretshare.icns to ensure that the individual PNGs are built.
 # Lazy?  Yep!  Effective?  You bet!
@@ -195,7 +202,8 @@ dist: clean
 
 clean:
 	rm -rf build
-	rm -rf packaging/secretshare.app
+	rm -rf packaging/secretshare.app packaging/secretshare.dmg
+	rm -rf packaging/gopath
 	rm -rf assets/secretshare.iconset
 
 .PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist
