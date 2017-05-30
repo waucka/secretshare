@@ -1,3 +1,4 @@
+SECRETSHARE_VERSION=1.0
 COMMIT_ID=$(shell git rev-parse HEAD)
 GOBUILD=go build -ldflags "-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID)"
 SERVER_DEPS=server/main.go commonlib/commonlib.go
@@ -26,17 +27,19 @@ windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe 
 native: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui
 
 # Output directories
-
-build/linux-amd64:
+build:
 	mkdir $@
 
-build/osx-amd64:
+build/linux-amd64: build
 	mkdir $@
 
-build/win-amd64:
+build/osx-amd64: build
 	mkdir $@
 
-build/native:
+build/win-amd64: build
+	mkdir $@
+
+build/native: build
 	mkdir $@
 
 # Linux Build
@@ -158,11 +161,41 @@ test_osx: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go 
 deploy: linux osx windows
 	./deploy.sh
 
+dist: clean
+	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)
+	cp -r assets packaging/secretshare-$(SECRETSHARE_VERSION)/assets
+	cp -r client packaging/secretshare-$(SECRETSHARE_VERSION)/client
+	cp -r commonlib packaging/secretshare-$(SECRETSHARE_VERSION)/commonlib
+	cp -r guiclient packaging/secretshare-$(SECRETSHARE_VERSION)/guiclient
+	mkdir packaging//secretshare-$(SECRETSHARE_VERSION)/packaging
+	cp -r packaging/README.md packaging/secretshare-$(SECRETSHARE_VERSION)/packaging/README.md
+	cp -r server packaging/secretshare-$(SECRETSHARE_VERSION)/server
+	cp -r LICENSE packaging/secretshare-$(SECRETSHARE_VERSION)/LICENSE
+	cp -r Makefile packaging/secretshare-$(SECRETSHARE_VERSION)/Makefile
+	cp -r README.md packaging/secretshare-$(SECRETSHARE_VERSION)/README.md
+	cp -r build_and_test.sh packaging/secretshare-$(SECRETSHARE_VERSION)/build_and_test.sh
+	cp -r credmgr packaging/secretshare-$(SECRETSHARE_VERSION)/credmgr
+	cp -r deploy.sh packaging/secretshare-$(SECRETSHARE_VERSION)/deploy.sh
+	cp -r dmgspec.json packaging/secretshare-$(SECRETSHARE_VERSION)/dmgspec.json
+	cp -r gen_bundle.py packaging/secretshare-$(SECRETSHARE_VERSION)/gen_bundle.py
+	cp -r gen_install.sh packaging/secretshare-$(SECRETSHARE_VERSION)/gen_install.sh
+	cp -r glide.lock packaging/secretshare-$(SECRETSHARE_VERSION)/glide.lock
+	cp -r glide.yaml packaging/secretshare-$(SECRETSHARE_VERSION)/glide.yaml
+	cp -r install_linux.sh packaging/secretshare-$(SECRETSHARE_VERSION)/install_linux.sh
+	cp -r install_osx.sh packaging/secretshare-$(SECRETSHARE_VERSION)/install_osx.sh
+	cp -r policy_template.json packaging/secretshare-$(SECRETSHARE_VERSION)/policy_template.json
+	cp -r secretshare-gui.desktop packaging/secretshare-$(SECRETSHARE_VERSION)/secretshare-gui.desktop
+	cp -r secretshare-server.service packaging/secretshare-$(SECRETSHARE_VERSION)/secretshare-server.service
+	cp -r secretshare-server.json.example packaging/secretshare-$(SECRETSHARE_VERSION)/secretshare-server.json.example
+	cp -r setup.sh packaging/secretshare-$(SECRETSHARE_VERSION)/setup.sh
+	cp -r setup_build.sh packaging/secretshare-$(SECRETSHARE_VERSION)/setup_build.sh
+	cp -r test.sh packaging/secretshare-$(SECRETSHARE_VERSION)/test.sh
+	cd packaging && tar -czf secretshare-$(SECRETSHARE_VERSION).tar.gz secretshare-$(SECRETSHARE_VERSION)
+	rm -rf packaging/secretshare-$(SECRETSHARE_VERSION)
+
 clean:
-	rm -f build/linux-amd64/secretshare-server build/linux-amd64/secretshare
-	rm -f build/osx-amd64/secretshare-server build/osx-amd64/secretshare
-	rm -f build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe
+	rm -rf build
 	rm -rf packaging/secretshare.app
 	rm -rf assets/secretshare.iconset
 
-.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle
+.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist
