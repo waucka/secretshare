@@ -27,6 +27,9 @@ windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe 
 
 native: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui
 
+deps:
+	GOPATH=$(GOPATH) glide install
+
 # Output directories
 build:
 	mkdir $@
@@ -69,13 +72,11 @@ build/native/secretshare: $(CLI_CLIENT_DEPS) build/native $(GOPATH)/src/github.c
 build/native/secretshare-gui: $(GUI_CLIENT_DEPS) build/native $(GOPATH)/src/github.com/waucka/secretshare
 	GOPATH=$(GOPATH) $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
-# We only depend on secretshare.icns to ensure that the individual PNGs are built.
-# Lazy?  Yep!  Effective?  You bet!
-install-linux: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui assets/secretshare.icns
+install-linux: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui assets/secretshare.iconset/icon_16x16.png assets/secretshare.iconset/icon_32x32.png assets/secretshare.iconset/icon_64x64.png assets/secretshare.iconset/icon_128x128.png
 	$(LINUX_MAKE_DIR) $(LINUX_BIN_DIR)
-	$(LINUX_INST_PROG) build/linux-amd64/secretshare-server $(LINUX_BIN_DIR)/secretshare-server
-	$(LINUX_INST_PROG) build/linux-amd64/secretshare $(LINUX_BIN_DIR)/secretshare
-	$(LINUX_INST_PROG) build/linux-amd64/secretshare-gui $(LINUX_BIN_DIR)/secretshare-gui
+	$(LINUX_INST_PROG) build/native/secretshare-server $(LINUX_BIN_DIR)/secretshare-server
+	$(LINUX_INST_PROG) build/native/secretshare $(LINUX_BIN_DIR)/secretshare
+	$(LINUX_INST_PROG) build/native/secretshare-gui $(LINUX_BIN_DIR)/secretshare-gui
 	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/16x16/apps
 	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/32x32/apps
 	$(LINUX_MAKE_DIR) $(LINUX_ICONS_DIR)/64x64/apps
@@ -188,8 +189,6 @@ dist: clean
 	cp -r gen_install.sh packaging/secretshare-$(SECRETSHARE_VERSION)/gen_install.sh
 	cp -r glide.lock packaging/secretshare-$(SECRETSHARE_VERSION)/glide.lock
 	cp -r glide.yaml packaging/secretshare-$(SECRETSHARE_VERSION)/glide.yaml
-	cp -r install_linux.sh packaging/secretshare-$(SECRETSHARE_VERSION)/install_linux.sh
-	cp -r install_osx.sh packaging/secretshare-$(SECRETSHARE_VERSION)/install_osx.sh
 	cp -r policy_template.json packaging/secretshare-$(SECRETSHARE_VERSION)/policy_template.json
 	cp -r secretshare-gui.desktop packaging/secretshare-$(SECRETSHARE_VERSION)/secretshare-gui.desktop
 	cp -r secretshare-server.service packaging/secretshare-$(SECRETSHARE_VERSION)/secretshare-server.service
@@ -202,8 +201,9 @@ dist: clean
 
 clean:
 	rm -rf build
+	rm -rf vendor
 	rm -rf packaging/secretshare.app packaging/secretshare.dmg
 	rm -rf packaging/gopath
 	rm -rf assets/secretshare.iconset
 
-.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist
+.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist deps
