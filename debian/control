@@ -3,8 +3,9 @@ Section: utils
 Priority: optional
 Maintainer: Alexander Wauck <alex@impulse101.org>
 Build-Depends: debhelper (>= 7),
-	       golang-go (>= 1.7),
-	       build-essential
+	       golang-go (>= 1.6),
+	       build-essential,
+	       librsvg2-bin
 Standards-Version: 3.9.8
 Homepage: https://github.com/waucka/secretshare
 Vcs-Browser: https://github.com/waucka/secretshare

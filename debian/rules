@@ -1,8 +1,15 @@
 #!/usr/bin/make -f
 
+DESTDIR=debian/tmp
+
+configure-stamp:
+	dh_testdir
+	$(MAKE) deps
+	touch configure-stamp
+
  # Stamp Rules
-build-stamp:
-	$(checkdir)
+build-stamp: configure-stamp
+	dh_testdir
 	-rm -f build-stamp
 	$(MAKE) native
 	touch build-stamp
@@ -12,8 +19,10 @@ build: build-stamp
 clean:
 	dh_testdir
 	dh_testroot
-	-rm -f build-stamp
+	-rm -f build-stamp configure-stamp
 	$(MAKE) clean
+	-rm -rf .glide
+	-rm -rf debian/tmp
 	dh_clean
 
 install: build
