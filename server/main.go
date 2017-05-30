@@ -154,7 +154,7 @@ func runServer(c *cli.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
 			ServerVersion:        Version,
 			APIVersion:           commonlib.APIVersion,
-			ServerSourceLocation: commonlib.SourceLocation,
+			ServerSourceLocation: commonlib.GetSourceLocation(),
 		})
 	})
 	r.POST("/upload", func(c *gin.Context) {

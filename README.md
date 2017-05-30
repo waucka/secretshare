@@ -115,11 +115,11 @@ To run tests, first you need to run `go get gopkg.in/check.v1`. And then run `cr
 
 ## Distribution
 
-When distributing, please change SourceLocation in vars.json to the location of the exact source code used to compile.
+If you have not made any changes, then no special action is needed when distributing the binary.  If you are packaging for a Linux distribution (especially Debian), you may need to patch GetSourceLocation in commonlib/sourcelocation.go to return a different URL.
 
 ## Forking
 
-If you wish to fork, please update SourceLocation in vars.json.example to the location of your forked source code repository.
+If you have made changes to secretshare, please ensure that the output of GetSourceLocation in commonlib/sourcelocation.go is correct.  If you are hosting your version on GitHub, all you need to do is change SourceUrlPrefix to the location of your fork in GitHub.  If you are not, then you may need to alter GetSourceLocation appropriately.
 
 ## Thanks
 

@@ -148,7 +148,7 @@ func fetchVersionInfo() (*versionInfo, error) {
 	info := &versionInfo{
 		ClientVersion:        Version,
 		ClientApiVersion:     commonlib.APIVersion,
-		ClientSourceLocation: commonlib.SourceLocation,
+		ClientSourceLocation: commonlib.GetSourceLocation(),
 		ServerVersion:        -1,
 		ServerApiVersion:     -1,
 		ServerSourceLocation: "ERROR",

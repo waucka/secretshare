@@ -300,7 +300,7 @@ func printVersion(c *cli.Context) error {
 	config.Bucket = c.Parent().String("bucket")
 	fmt.Printf("Client version: %d\n", Version)
 	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
-	fmt.Printf("Client source code: %s\n", commonlib.SourceLocation)
+	fmt.Printf("Client source code: %s\n", commonlib.GetSourceLocation())
 
 	resp, err := http.Get(config.EndpointBaseURL + "/version")
 	if err != nil {
