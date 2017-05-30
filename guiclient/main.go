@@ -48,7 +48,7 @@ var (
 	config    clientConfig
 	secretKey string
 	homeDir   string
-	Version   = 4 //deploy.sh:VERSION
+	Version   = 5
 )
 
 func loadConfig(configPath string) error {
@@ -148,7 +148,7 @@ func fetchVersionInfo() (*versionInfo, error) {
 	info := &versionInfo{
 		ClientVersion:        Version,
 		ClientApiVersion:     commonlib.APIVersion,
-		ClientSourceLocation: commonlib.SourceLocation,
+		ClientSourceLocation: commonlib.GetSourceLocation(),
 		ServerVersion:        -1,
 		ServerApiVersion:     -1,
 		ServerSourceLocation: "ERROR",

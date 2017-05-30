@@ -57,7 +57,7 @@ This will download the file to your working directory. If it's already been 24-4
 
 ### Building and installing from source
 
-You will need Git, Go (probably at least 1.5?), Python 2, and make.  Don't forget to set your `$GOPATH`. If you don't have a go development environment, [the Go docs](https://golang.org/doc/code.html) can walk you through setting one up.
+You will need Git, Go (probably at least 1.5?), and make.  Don't forget to set your `$GOPATH`. If you don't have a go development environment, [the Go docs](https://golang.org/doc/code.html) can walk you through setting one up.
 
 Build on a machine with the same CPU architecture as the one you'll be deploying to.
 
@@ -115,11 +115,11 @@ To run tests, first you need to run `go get gopkg.in/check.v1`. And then run `cr
 
 ## Distribution
 
-When distributing, please change SourceLocation in vars.json to the location of the exact source code used to compile.
+If you have not made any changes, then no special action is needed when distributing the binary.  If you are packaging for a Linux distribution (especially Debian), you may need to patch GetSourceLocation in commonlib/sourcelocation.go to return a different URL.
 
 ## Forking
 
-If you wish to fork, please update SourceLocation in vars.json.example to the location of your forked source code repository.
+If you have made changes to secretshare, please ensure that the output of GetSourceLocation in commonlib/sourcelocation.go is correct.  If you are hosting your version on GitHub, all you need to do is change SourceUrlPrefix to the location of your fork in GitHub.  If you are not, then you may need to alter GetSourceLocation appropriately.
 
 ## Thanks
 
