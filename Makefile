@@ -1,5 +1,9 @@
 COMMIT_ID=$(shell git rev-parse HEAD)
 GOBUILD=go build -ldflags "-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID)"
+SERVER_DEPS=server/main.go commonlib/commonlib.go
+COMMON_CLIENT_DEPS=commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+CLI_CLIENT_DEPS=client/main.go $(COMMON_CLIENT_DEPS)
+GUI_CLIENT_DEPS=guiclient/main.go $(COMMON_CLIENT_DEPS)
 
 all: linux osx windows
 
@@ -9,24 +13,35 @@ osx: build/osx-amd64/secretshare-server build/osx-amd64/secretshare build/osx-am
 
 windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe build/win-amd64/secretshare-gui.exe
 
+# Output directories
+
+build/linux-amd64:
+	mkdir $@
+
+build/osx-amd64:
+	mkdir $@
+
+build/win-amd64:
+	mkdir $@
+
 # Linux Build
-build/linux-amd64/secretshare-server: server/main.go commonlib/commonlib.go
+build/linux-amd64/secretshare-server: $(SERVER_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/server
 
-build/linux-amd64/secretshare: client/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/linux-amd64/secretshare: $(CLI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
 
-build/linux-amd64/secretshare-gui: guiclient/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/linux-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 # OS X Build
-build/osx-amd64/secretshare-server: server/main.go commonlib/commonlib.go
+build/osx-amd64/secretshare-server: $(SERVER_DEPS) build/osx-amd64
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/server
 
-build/osx-amd64/secretshare: client/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/osx-amd64/secretshare: $(CLI_CLIENT_DEPS) build/osx-amd64
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
 
-build/osx-amd64/secretshare-gui: guiclient/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/osx-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/osx-amd64
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 assets/secretshare.iconset:
@@ -72,13 +87,13 @@ packaging/secretshare.dmg: packaging/secretshare.app assets/secretshare_dmg_back
 mac_bundle: packaging/secretshare.dmg
 
 # Windows Build
-build/win-amd64/secretshare-server.exe: server/main.go commonlib/commonlib.go
+build/win-amd64/secretshare-server.exe: $(SERVER_DEPS) build/win-amd64
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/server
 
-build/win-amd64/secretshare.exe: client/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/win-amd64/secretshare.exe: $(CLI_CLIENT_DEPS) build/win-amd64
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
 
-build/win-amd64/secretshare-gui.exe: guiclient/main.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
+build/win-amd64/secretshare-gui.exe: $(GUI_CLIENT_DEPS) build/win-amd64
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go linux osx windows
