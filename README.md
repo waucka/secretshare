@@ -57,7 +57,7 @@ This will download the file to your working directory. If it's already been 24-4
 
 ### Building and installing from source
 
-You will need Git, Go (probably at least 1.5?), and make.  Don't forget to set your `$GOPATH`. If you don't have a go development environment, [the Go docs](https://golang.org/doc/code.html) can walk you through setting one up.
+You will need Git, Go (probably at least 1.5?), [Glide](https://glide.sh/), and make.  Don't forget to set your `$GOPATH`. If you don't have a go development environment, [the Go docs](https://golang.org/doc/code.html) can walk you through setting one up.
 
 Build on a machine with the same CPU architecture as the one you'll be deploying to.
 
