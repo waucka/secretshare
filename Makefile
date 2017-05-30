@@ -23,6 +23,8 @@ osx: build/osx-amd64/secretshare-server build/osx-amd64/secretshare build/osx-am
 
 windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe build/win-amd64/secretshare-gui.exe
 
+native: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui
+
 # Output directories
 
 build/linux-amd64:
@@ -34,6 +36,9 @@ build/osx-amd64:
 build/win-amd64:
 	mkdir $@
 
+build/native:
+	mkdir $@
+
 # Linux Build
 build/linux-amd64/secretshare-server: $(SERVER_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/server
@@ -43,6 +48,16 @@ build/linux-amd64/secretshare: $(CLI_CLIENT_DEPS) build/linux-amd64
 
 build/linux-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
+
+# For packaging
+build/native/secretshare-server: $(SERVER_DEPS) build/native
+	$(GOBUILD) -o $@ github.com/waucka/secretshare/server
+
+build/native/secretshare: $(CLI_CLIENT_DEPS) build/native
+	$(GOBUILD) -o $@ github.com/waucka/secretshare/client
+
+build/native/secretshare-gui: $(GUI_CLIENT_DEPS) build/native
+	$(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 # We only depend on secretshare.icns to ensure that the individual PNGs are built.
 # Lazy?  Yep!  Effective?  You bet!
@@ -150,4 +165,4 @@ clean:
 	rm -rf packaging/secretshare.app
 	rm -rf assets/secretshare.iconset
 
-.PHONY: all test clean deploy linux osx windows linux-install mac_bundle
+.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle
