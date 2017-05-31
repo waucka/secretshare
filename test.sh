@@ -72,7 +72,7 @@ client_api_version=$(echo "$version_out" | grep '^Client API version' | cut -d '
 server_version=$(echo "$version_out" | grep '^Server version' | cut -d ':' -f 2 | cut -c 2-)
 server_api_version=$(echo "$version_out" | grep '^Server API version' | cut -d ':' -f 2 | cut -c 2-)
 
-if [ "x$client_version" != "x4" ]; then
+if [ "$client_version" != "1.0" ]; then
     kill $server_pid
     echo "Wrong client version: $client_version"
     echo -e $version_out
@@ -80,7 +80,7 @@ if [ "x$client_version" != "x4" ]; then
     exit 1
 fi
 
-if [ "x$client_api_version" != "x3" ]; then
+if [ "$client_api_version" != "3" ]; then
     kill $server_pid
     echo "Wrong client API version: $client_api_version"
     echo -e $version_out
@@ -88,7 +88,7 @@ if [ "x$client_api_version" != "x3" ]; then
     exit 1
 fi
 
-if [ "x$server_version" != "x3" ]; then
+if [ "$server_version" != "1.0" ]; then
     kill $server_pid
     echo "Wrong server version: $server_version"
     echo -e $version_out
@@ -96,7 +96,7 @@ if [ "x$server_version" != "x3" ]; then
     exit 1
 fi
 
-if [ "x$server_api_version" != "x3" ]; then
+if [ "$server_api_version" != "3" ]; then
     kill $server_pid
     echo "Wrong server API version: $server_api_version"
     echo -e $version_out
