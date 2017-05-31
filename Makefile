@@ -157,9 +157,6 @@ test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go comm
 	go test github.com/waucka/secretshare/commonlib
 	SECRETSHARE_VERSION=$(SECRETSHARE_VERSION) ./test.sh
 
-deploy: linux osx windows
-	./deploy.sh
-
 dist: clean secretshare-gui.desktop
 	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)
 	cp -r assets packaging/secretshare-$(SECRETSHARE_VERSION)/assets
