@@ -48,7 +48,6 @@ var (
 	config    clientConfig
 	secretKey string
 	homeDir   string
-	Version   = 5
 )
 
 func loadConfig(configPath string) error {
@@ -136,20 +135,20 @@ func writeKey(psk, keyPath string) error {
 }
 
 type versionInfo struct {
-	ClientVersion        int
+	ClientVersion        string
 	ClientApiVersion     int
 	ClientSourceLocation string
-	ServerVersion        int
+	ServerVersion        string
 	ServerApiVersion     int
 	ServerSourceLocation string
 }
 
 func fetchVersionInfo() (*versionInfo, error) {
 	info := &versionInfo{
-		ClientVersion:        Version,
+		ClientVersion:        commonlib.Version,
 		ClientApiVersion:     commonlib.APIVersion,
 		ClientSourceLocation: commonlib.GetSourceLocation(),
-		ServerVersion:        -1,
+		ServerVersion:        "ERROR",
 		ServerApiVersion:     -1,
 		ServerSourceLocation: "ERROR",
 	}
@@ -529,8 +528,8 @@ func aboutUi(parent *ui.Window, andthen afterFunc) {
 Copyright © 2016  Alexander Wauck
 License: AGPLv3
 
-Client Version: %d
-Server Version: %d
+Client Version: %s
+Server Version: %s
 
 Client API Version: %d
 Server API Version: %d

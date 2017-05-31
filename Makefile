@@ -1,6 +1,7 @@
 SECRETSHARE_VERSION=1.0
 COMMIT_ID=$(shell git rev-parse HEAD)
-GOBUILD=go build -ldflags "-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID)"
+GO_LDFLAGS=-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID) -X github.com/waucka/secretshare/commonlib.Version=$(SECRETSHARE_VERSION)
+GOBUILD=go build -ldflags "$(GO_LDFLAGS)"
 GOPATH=$(shell pwd)/packaging/gopath
 SERVER_DEPS=server/main.go commonlib/commonlib.go
 COMMON_CLIENT_DEPS=commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go commonlib/api.go
