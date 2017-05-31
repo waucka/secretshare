@@ -163,7 +163,7 @@ dist: clean
 	cp -r client packaging/secretshare-$(SECRETSHARE_VERSION)/client
 	cp -r commonlib packaging/secretshare-$(SECRETSHARE_VERSION)/commonlib
 	cp -r guiclient packaging/secretshare-$(SECRETSHARE_VERSION)/guiclient
-	mkdir packaging//secretshare-$(SECRETSHARE_VERSION)/packaging
+	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)/packaging
 	cp -r packaging/README.md packaging/secretshare-$(SECRETSHARE_VERSION)/packaging/README.md
 	cp -r server packaging/secretshare-$(SECRETSHARE_VERSION)/server
 	cp -r LICENSE packaging/secretshare-$(SECRETSHARE_VERSION)/LICENSE
