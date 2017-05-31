@@ -326,7 +326,7 @@ Response body:
 %s`, err.Error(), bodyBytes)
 	}
 
-	fmt.Printf("Server version: %d\n", responseData.ServerVersion)
+	fmt.Printf("Server version: %s\n", responseData.ServerVersion)
 	fmt.Printf("Server API version: %d\n", responseData.APIVersion)
 	fmt.Printf("Server source code: %s\n", responseData.ServerSourceLocation)
 
