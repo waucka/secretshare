@@ -191,6 +191,7 @@ fullclean:
 	rm -f secretshare-gui.desktop
 
 clean:
+	find . -name '*~' -delete
 	rm -rf build
 	rm -rf vendor
 	rm -rf packaging/secretshare.app packaging/secretshare.dmg
