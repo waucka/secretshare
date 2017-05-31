@@ -26,16 +26,6 @@ if [ "x$TEST_BUCKET" == "x" ]; then
     exit 1
 fi
 
-if [ "x$CURRENT_OS" == "x" ]; then
-    echo 'Set $CURRENT_OS to the OS you are testing on (linux, osx, win) and re-run.'
-    exit 1
-fi
-
-if [ "x$CURRENT_ARCH" == "x" ]; then
-    echo 'Set $CURRENT_ARCH to the OS you are testing on (amd64, etc.) and re-run.'
-    exit 1
-fi
-
 if [ -z "$PORT" ]; then
     PORT=8080
 fi
@@ -59,7 +49,7 @@ cat > secretshare-server-test.json <<EOF
 EOF
 
 killall secretshare-server
-./build/$CURRENT_OS-$CURRENT_ARCH/secretshare-server -config secretshare-server-test.json &> test-server.log &
+./build/native/secretshare-server -config secretshare-server-test.json &> test-server.log &
 server_pid=$!
 
 if [ "x$server_pid" == "x" ]; then
@@ -74,7 +64,7 @@ if ! kill -0 $server_pid; then
     exit 1
 fi
 
-CLIENT="./build/$CURRENT_OS-$CURRENT_ARCH/secretshare --endpoint http://localhost:$PORT --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
+CLIENT="./build/native/secretshare --endpoint http://localhost:$PORT --bucket-region $TEST_BUCKET_REGION --bucket $TEST_BUCKET"
 
 version_out=$($CLIENT version)
 client_version=$(echo "$version_out" | grep '^Client version' | cut -d ':' -f 2 | cut -c 2-)
