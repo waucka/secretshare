@@ -33,19 +33,19 @@ deps:
 
 # Output directories
 build:
-	mkdir $@
+	-mkdir $@
 
 build/linux-amd64: build
-	mkdir $@
+	-mkdir $@
 
 build/osx-amd64: build
-	mkdir $@
+	-mkdir $@
 
 build/win-amd64: build
-	mkdir $@
+	-mkdir $@
 
 build/native: build
-	mkdir $@
+	-mkdir $@
 
 # Linux Build
 build/linux-amd64/secretshare-server: $(SERVER_DEPS) build/linux-amd64
