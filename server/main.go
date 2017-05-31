@@ -42,7 +42,6 @@ var (
 	ErrIDShort = errors.New("Not enough random bytes for ID!  This should never happen!")
 	ErrPreSign = errors.New("Failed to generate pre-signed upload URL!")
 
-	Version           = 3 //deploy.sh:VERSION
 	DefaultConfigPath = "/etc/secretshare-server.json"
 	ReqIdChars        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 	ReqIdLen          = 16
@@ -105,7 +104,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "secretshare-server"
 	app.Usage = "Securely share secrets"
-	app.Version = fmt.Sprintf("%d", Version)
+	app.Version = commonlib.Version
 	app.Action = runServer
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -152,7 +151,7 @@ func runServer(c *cli.Context) {
 	r.Use(reqIdMiddleware)
 	r.GET("/version", func(c *gin.Context) {
 		c.JSON(http.StatusOK, &commonlib.ServerVersionResponse{
-			ServerVersion:        Version,
+			ServerVersion:        commonlib.Version,
 			APIVersion:           commonlib.APIVersion,
 			ServerSourceLocation: commonlib.GetSourceLocation(),
 		})

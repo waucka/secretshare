@@ -42,7 +42,6 @@ var (
 	config    clientConfig
 	secretKey string
 	homeDir   string
-	Version   = 5
 )
 
 // Returns a cli.ExitError with the given message, specified in a Printf-like way
@@ -298,7 +297,7 @@ func editConfig(c *cli.Context) error {
 func printVersion(c *cli.Context) error {
 	config.EndpointBaseURL = cleanUrl(c.Parent().String("endpoint"))
 	config.Bucket = c.Parent().String("bucket")
-	fmt.Printf("Client version: %d\n", Version)
+	fmt.Printf("Client version: %s\n", commonlib.Version)
 	fmt.Printf("Client API version: %d\n", commonlib.APIVersion)
 	fmt.Printf("Client source code: %s\n", commonlib.GetSourceLocation())
 
@@ -355,7 +354,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "secretshare"
 	app.Usage = "Securely share secrets"
-	app.Version = fmt.Sprintf("%d", Version)
+	app.Version = commonlib.Version
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "endpoint",

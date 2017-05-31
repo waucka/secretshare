@@ -41,6 +41,8 @@ var (
 	Encoding = base64.NewEncoding("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxzy0123456789+_").WithPadding(base64.NoPadding)
 )
 
+var Version string
+
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
@@ -64,7 +66,7 @@ type FileMetadata struct {
 }
 
 type ServerVersionResponse struct {
-	ServerVersion        int    `json:"server_version"`
+	ServerVersion        string `json:"server_version"`
 	APIVersion           int    `json:"api_version"`
 	ServerSourceLocation string `json:"server_source"`
 }
