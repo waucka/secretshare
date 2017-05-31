@@ -18,13 +18,13 @@ LINUX_MAKE_DIR = install -p -d $(LINUX_INSTALL_OWNERSHIP) -m 755
 LINUX_INST_FILE = install -c $(LINUX_INSTALL_OWNERSHIP) -m 644
 LINUX_INST_PROG = install -c $(LINUX_INSTALL_OWNERSHIP) -m 755 -s
 
-all: linux osx windows
+all: native
 
-linux: build/linux-amd64/secretshare-server build/linux-amd64/secretshare build/linux-amd64/secretshare-gui
+cross-linux: build/linux-amd64/secretshare-server build/linux-amd64/secretshare
 
-osx: build/osx-amd64/secretshare-server build/osx-amd64/secretshare build/osx-amd64/secretshare-gui
+cross-osx: build/osx-amd64/secretshare-server build/osx-amd64/secretshare
 
-windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe build/win-amd64/secretshare-gui.exe
+cross-windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshare.exe
 
 native: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui
 
@@ -53,9 +53,6 @@ build/linux-amd64/secretshare-server: $(SERVER_DEPS) build/linux-amd64
 
 build/linux-amd64/secretshare: $(CLI_CLIENT_DEPS) build/linux-amd64
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
-
-build/linux-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/linux-amd64
-	GOOS=linux GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
 # For packaging
 $(GOPATH)/src/github.com/waucka:
@@ -100,6 +97,7 @@ build/osx-amd64/secretshare-server: $(SERVER_DEPS) build/osx-amd64
 build/osx-amd64/secretshare: $(CLI_CLIENT_DEPS) build/osx-amd64
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
 
+# Keeping this one around for Mac packaging; that should fail if you're not on macOS.
 build/osx-amd64/secretshare-gui: $(GUI_CLIENT_DEPS) build/osx-amd64
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
@@ -152,18 +150,7 @@ build/win-amd64/secretshare-server.exe: $(SERVER_DEPS) build/win-amd64
 build/win-amd64/secretshare.exe: $(CLI_CLIENT_DEPS) build/win-amd64
 	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/client
 
-build/win-amd64/secretshare-gui.exe: $(GUI_CLIENT_DEPS) build/win-amd64
-	GOOS=windows GOARCH=amd64 $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
-
-test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go linux osx windows
-	go test github.com/waucka/secretshare/commonlib
-	./test.sh
-
-test_linux: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go linux
-	go test github.com/waucka/secretshare/commonlib
-	./test.sh
-
-test_osx: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go osx
+test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go native
 	go test github.com/waucka/secretshare/commonlib
 	./test.sh
 
