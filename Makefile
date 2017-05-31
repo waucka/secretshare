@@ -29,6 +29,7 @@ cross-windows: build/win-amd64/secretshare-server.exe build/win-amd64/secretshar
 native: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui
 
 deps:
+	-mkdir $(GOPATH)
 	GOPATH=$(GOPATH) glide install
 
 # Output directories
