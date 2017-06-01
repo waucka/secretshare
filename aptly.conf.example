@@ -1,0 +1,12 @@
+{
+    "S3PublishEndpoints": {
+	"secretshare": {
+	    "region": "us-east-2",
+	    "bucket": "apt-bucket",
+	    "awsAccessKeyID": "REDACTED",
+	    "awsSecretAccessKey": "REDACTED",
+	    "prefix": "secretshare",
+	    "acl": "public-read"
+	}
+    }
+}

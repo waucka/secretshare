@@ -25,3 +25,8 @@ assets/secretshare.icns
 assets/secretshare_dmg_background.png
 build-debs-stamp
 deb-work
+artifacts
+release.yaml
+SHA256SUMS.linux
+SHA256SUMS.osx
+SHA256SUMS.windows
