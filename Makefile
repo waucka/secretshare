@@ -1,3 +1,4 @@
+SECRETSHARE_VERSION ?= $(shell git branch | grep '^\*' | cut -c 3-)
 COMMIT_ID ?= $(shell git rev-parse HEAD)
 GO_LDFLAGS=-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID) -X github.com/waucka/secretshare/commonlib.Version=$(SECRETSHARE_VERSION)
 GOBUILD=go build -ldflags "$(GO_LDFLAGS)"
