@@ -160,7 +160,7 @@ test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go comm
 deploy: linux osx windows
 	./deploy.sh
 
-dist: clean
+dist: clean secretshare-gui.desktop
 	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)
 	cp -r assets packaging/secretshare-$(SECRETSHARE_VERSION)/assets
 	cp -r client packaging/secretshare-$(SECRETSHARE_VERSION)/client
@@ -190,12 +190,16 @@ dist: clean
 	cd packaging && tar -czf secretshare-$(SECRETSHARE_VERSION).tar.gz secretshare-$(SECRETSHARE_VERSION)
 	rm -rf packaging/secretshare-$(SECRETSHARE_VERSION)
 
+fullclean:
+	rm -f secretshare-gui.desktop
+
 clean:
 	rm -rf build
 	rm -rf vendor
 	rm -rf packaging/secretshare.app packaging/secretshare.dmg
 	rm -rf packaging/gopath
+	rm -rf packaging/debs
 	rm -rf assets/secretshare.iconset
-	rm -f secretshare-gui.desktop
+	rm -f build-debs-stamp
 
-.PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist deps
+.PHONY: all test clean fullclean deploy linux osx windows linux-install native mac_bundle dist deps build-debs upload-debs
