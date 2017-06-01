@@ -19,6 +19,9 @@ packaging/secretshare.app
 packaging/secretshare.dmg
 packaging/gopath
 packaging/secretshare*.tar.gz
+packaging/debs
 assets/secretshare.iconset
 assets/secretshare.icns
 assets/secretshare_dmg_background.png
+build-debs-stamp
+deb-work

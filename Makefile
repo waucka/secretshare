@@ -157,6 +157,22 @@ test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go comm
 	go test github.com/waucka/secretshare/commonlib
 	SECRETSHARE_VERSION=$(SECRETSHARE_VERSION) ./test.sh
 
+build-debs: build-debs-stamp
+
+build-debs-stamp:
+	rm -rf ./packaging/debs
+	rm -rf ./deb-work
+	mkdir ./deb-work
+	docker run -v $(shell pwd)/deb-work:/debuild -w /debuild --rm debuilder-secretshare build_deb $(SECRETSHARE_VERSION)
+	mkdir ./packaging/debs
+	mv ./deb-work/*.deb ./packaging/debs/
+	rm -rf ./deb-work
+	touch build-debs-stamp
+
+upload-debs: build-debs
+	aptly repo add secretshare packaging/debs/*
+	aptly publish repo -gpg-key=8D656C01 secretshare s3:secretshare:
+
 dist: clean secretshare-gui.desktop
 	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)
 	cp -r assets packaging/secretshare-$(SECRETSHARE_VERSION)/assets
