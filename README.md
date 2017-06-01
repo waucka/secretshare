@@ -55,18 +55,49 @@ This will download the file to your working directory. If it's already been 24-4
 
 ## Server setup (for admins)
 
+### Installing from a package (recommended)
+
+If you are running Debian or Ubuntu:
+
+```
+curl -L 'https://apt.waucka.net/apt-key.gpg' | sudo apt-key add -
+sudo sh -c 'echo "deb http://apt.waucka.net/secretshare/ stable main" > /etc/apt/sources.list.d/secretshare.list'
+sudo apt update
+sudo apt install secretshare-server
+```
+
+This should work on any reasonably recent version of Debian or Ubuntu.
+
+### Docker
+
+1. Clone the repository.
+2. Enter the [docker directory](./docker).
+3. Run `docker build -t secretshare .`
+4. Push the image to the Docker repository of your choice or run it locally.  You will need to set the environment variables listed below:
+
+- `SECRETSHARE_BUCKET` -- the name of the S3 bucket you will use
+- `SECRETSHARE_BUCKET_REGION` -- the region where the above bucket is located
+- `SECRETSHARE_SECRET_KEY` -- make something up ([pwgen](https://github.com/jbernard/pwgen) is good for this)
+- `SECRETSHARE_AWS_KEY_ID` -- the AWS key ID for an IAM user that has the privileges listed in the [policy template](./policy_template.json)
+- `SECRETSHARE_AWS_SECRET_KEY` -- the AWS secret key for the IAM user
+
+### Installing from a prebuilt binary
+
+Prebuilt binaries are available on the [releases page](https://github.com/waucka/secretshare/releases).
+Just download one and then follow the instructions below, starting at step 5.
+
 ### Building and installing from source
 
 You will need Git, Go (probably at least 1.5?), [Glide](https://glide.sh/), and make.  Don't forget to set your `$GOPATH`. If you don't have a go development environment, [the Go docs](https://golang.org/doc/code.html) can walk you through setting one up.
 
 Build on a machine with the same CPU architecture as the one you'll be deploying to.
 
-1. Run `go get github.com/waucka/secretshare`. Ignore any "no buildable Go source files" warnings.
-2. Run `cd $GOPATH/src/github.com/waucka/secretshare && glide install`.
-3. [OPTIONAL] Run `./setup.sh`. This sets up your config files and environment for building (or developing) secretshare. It also creates or configures the S3 bucket and AWS credentials that secretshare will use. It outputs a `secretshare config` command that you'll need to give to your users; __save this!__
-4. Run `make native`, and it should build secretshare, secretshare-gui, and secretshare-server.  Binaries will be in `build/native/`.  You can also run `make linux`, `make osx`, or `make windows` to cross-compile, but this might not work due to our use of libraries that use cgo.
+1. Clone the repository.
+2. Run `make deps`.
+3. Run `make native`.  If you want to give it a particular version name, set the `SECRETSHARE_VERSION` environment variable.  The binaries will end up in `build/native`.  You can cross-compile the server and CLI client using `make linux`, `make osx`, or `make windows`, but the GUI client cannot be cross-compiled.
+4. [OPTIONAL] Run `./setup.sh`. This sets up your config files and environment for building (or developing) secretshare. It also creates or configures the S3 bucket and AWS credentials that secretshare will use. It outputs a `secretshare config` command that you'll need to give to your users; __save this!__
 5. Copy `secretshare-server` to `/usr/local/bin` on the target server. Copy `secretshare-server.json.example` to `/etc/secretshare-server.json` on the same server and make any necessary changes. Make sure it's readable only by the user that `secretshare-server` is going to run as.
-6. Configure secretshare-server to start on boot, run as an unprivileged user, and restart if it crashes.
+6. Configure secretshare-server to start on boot, run as an unprivileged user, and restart if it crashes.  If you are using systemd, use [secretshare-server.service](./secretshare-server.service).  You will need to create the `secretshare` user.
 
 You should also put HTTPS in front of `secretshare-server`. See [the nginx documentation](https://www.nginx.com/resources/admin-guide/nginx-tcp-ssl-upstreams/) for a walkthrough of putting an HTTPS-enabled proxy in front of an application.
 
@@ -74,13 +105,20 @@ Your users will need to run `secretshare config --endpoint $SECRETSHARE_SERVER_U
 
 ### Distributing the `secretshare` client to your users
 
-After building from source, you'll find client binaries for OS X, Linux, and Windows in the `build` directory. Send them out to your users, and have your users run the `secretshare config` command above.
+If you built from source, you'll find client binaries for OS X, Linux, and Windows in the `build` directory. Send them out to your users, and have your users run the `secretshare config` command above.
+
+Otherwise, point your users at the release page or the APT repository.  Those who are comfortable with the command line should install the `secretshare` binary or the `secretshare-cli` Debian package.  Those who prefer a GUI should install the `secretshare-gui` binary or the `secretshare-gui` Debian package.
 
 ## Installation
 
 ### Client
 
-Compile, then put the `secretshare` executable somewhere in your `$PATH`.
+Compile or download, then put the `secretshare` executable somewhere in your `$PATH`.
+If you want the command-line client, then grab the `secretshare` binary.  If you want the GUI, then grab the `secretshare-gui` binary.
+
+If you are on Debian or Ubuntu, you can use the APT repository.  If you want the command-line client, then install the `secretshare-cli` package.  If you want the GUI, then install the `secretshare-gui` package.
+
+On a Mac, you may want to use secretshare.dmg to install the GUI version.  Please note that neither the DMG nor the .app bundle are signed, so you will need to configure macOS to allow unsigned software to run.
 
 ### Server
 
@@ -90,7 +128,7 @@ Compile, then put the `secretshare` executable somewhere in your `$PATH`.
 
 ### AWS Credentials
 
-You will need to run the server as an appropriately privileged user.  See policy_template.json for an AWS policy template for an AWS policy that has the needed privileges.  It should only need PutObject and PutObjectACL, but the others may be needed in the future (especially DeleteObject and ListBucket).
+You will need to run the server as an appropriately privileged user.  See [policy_template.json](./policy_template.json) for an AWS policy template for an AWS policy that has the needed privileges.  It should only need PutObject and PutObjectACL, but the others may be needed in the future (especially DeleteObject and ListBucket).
 
 
 ## What goes on under the hood
@@ -113,7 +151,7 @@ Now suppose somebody runs `secretshare receive $KEY`, `$KEY` is the key from the
 
 To set up your dev environment initially, you'll want to run `setup.sh` and `make` as described in steps 1 & 2 of _Building and installing from source_. This will ask for some AWS credentials to do the initial setup.
 
-To run tests, first you need to run `go get gopkg.in/check.v1`. And then run `credmgr on`. And then run `source test_env`. And then run `make test`. Optionally, you can also run `go test github.com/waucka/secretshare/commonlib` to run the unit tests for encryption and decryption.
+To run tests, first you need to run `glide install`. And then run `credmgr on`. And then run `source test_env`. And then run `make test`. Optionally, you can just run `go test github.com/waucka/secretshare/commonlib` to run the unit tests for encryption and decryption.  `make test` runs this in addition to the functional tests.
 
 ## Distribution
 

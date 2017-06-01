@@ -1,0 +1,17 @@
+body_text: |
+  DESCRIPTION GOES HERE
+
+linux:
+  binary_cli: artifacts/linux-amd64/secretshare
+  binary_gui: artifacts/linux-amd64/secretshare-gui
+  binary_server: artifacts/linux-amd64/secretshare-server
+
+osx:
+  binary_cli: artifacts/osx-amd64/secretshare
+  binary_gui: artifacts/osx-amd64/secretshare-gui
+  binary_server: artifacts/osx-amd64/secretshare-server
+
+windows:
+  binary_cli: artifacts/windows-amd64/secretshare.exe
+  binary_gui: artifacts/windows-amd64/secretshare-gui.exe
+  binary_server: artifacts/windows-amd64/secretshare-server.exe

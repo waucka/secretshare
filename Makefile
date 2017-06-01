@@ -1,3 +1,4 @@
+SECRETSHARE_VERSION ?= $(shell git branch | grep '^\*' | cut -c 3-)
 COMMIT_ID ?= $(shell git rev-parse HEAD)
 GO_LDFLAGS=-X github.com/waucka/secretshare/commonlib.GitCommit=$(COMMIT_ID) -X github.com/waucka/secretshare/commonlib.Version=$(SECRETSHARE_VERSION)
 GOBUILD=go build -ldflags "$(GO_LDFLAGS)"
@@ -157,8 +158,21 @@ test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go comm
 	go test github.com/waucka/secretshare/commonlib
 	SECRETSHARE_VERSION=$(SECRETSHARE_VERSION) ./test.sh
 
-deploy: linux osx windows
-	./deploy.sh
+build-debs: build-debs-stamp
+
+build-debs-stamp:
+	rm -rf ./packaging/debs
+	rm -rf ./deb-work
+	mkdir ./deb-work
+	docker run -v $(shell pwd)/deb-work:/debuild -w /debuild --rm debuilder-secretshare build_deb $(SECRETSHARE_VERSION)
+	mkdir ./packaging/debs
+	mv ./deb-work/*.deb ./packaging/debs/
+	rm -rf ./deb-work
+	touch build-debs-stamp
+
+upload-debs: build-debs
+	aptly repo add secretshare packaging/debs/*
+	aptly publish repo -gpg-key=8D656C01 secretshare s3:secretshare:
 
 dist: clean secretshare-gui.desktop
 	mkdir packaging/secretshare-$(SECRETSHARE_VERSION)
@@ -194,6 +208,7 @@ fullclean:
 	rm -f secretshare-gui.desktop
 
 clean:
+	find . -name '*~' -delete
 	rm -rf build
 	rm -rf vendor
 	rm -rf packaging/secretshare.app packaging/secretshare.dmg
