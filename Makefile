@@ -135,7 +135,7 @@ assets/secretshare.icns: assets/secretshare.iconset/icon_128@2x.png assets/secre
 
 packaging/secretshare.app: assets/secretshare.icns gen_bundle.py build/osx-amd64/secretshare-gui
 	rm -rf $@
-	./gen_bundle.py secretshare secretshare-gui com.github.waucka.secretshare secretshare secretshare.icns 4
+	./gen_bundle.py secretshare secretshare-gui com.github.waucka.secretshare secretshare secretshare.icns $(SECRETSHARE_VERSION)
 
 assets/secretshare_dmg_background.png: assets/secretshare_dmg_background.svg
 	rsvg-convert -w 640 -h 480 $< -o $@
