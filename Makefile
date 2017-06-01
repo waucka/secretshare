@@ -70,7 +70,10 @@ build/native/secretshare: $(CLI_CLIENT_DEPS) build/native $(GOPATH)/src/github.c
 build/native/secretshare-gui: $(GUI_CLIENT_DEPS) build/native $(GOPATH)/src/github.com/waucka/secretshare
 	GOPATH=$(GOPATH) $(GOBUILD) -o $@ github.com/waucka/secretshare/guiclient
 
-install-linux: build/native/secretshare-server build/native/secretshare build/native/secretshare-gui assets/secretshare.iconset/icon_16x16.png assets/secretshare.iconset/icon_32x32.png assets/secretshare.iconset/icon_64x64.png assets/secretshare.iconset/icon_128x128.png
+secretshare-gui.desktop: secretshare-gui.desktop.in
+	sed "s/%SECRETSHARE_VERSION%/$(SECRETSHARE_VERSION)/g" < secretshare-gui.desktop.in > secretshare-gui.desktop
+
+install-linux: build/native/secretshare-server build/native/secretshare secretshare-gui.desktop build/native/secretshare-gui assets/secretshare.iconset/icon_16x16.png assets/secretshare.iconset/icon_32x32.png assets/secretshare.iconset/icon_64x64.png assets/secretshare.iconset/icon_128x128.png
 	$(LINUX_MAKE_DIR) $(LINUX_BIN_DIR)
 	$(LINUX_INST_PROG) build/native/secretshare-server $(LINUX_BIN_DIR)/secretshare-server
 	$(LINUX_INST_PROG) build/native/secretshare $(LINUX_BIN_DIR)/secretshare
@@ -152,7 +155,7 @@ build/win-amd64/secretshare.exe: $(CLI_CLIENT_DEPS) build/win-amd64
 
 test: commonlib/crypt_test.go commonlib/commonlib.go commonlib/encrypter.go commonlib/decrypter.go native
 	go test github.com/waucka/secretshare/commonlib
-	./test.sh
+	SECRETSHARE_VERSION=$(SECRETSHARE_VERSION) ./test.sh
 
 deploy: linux osx windows
 	./deploy.sh
@@ -193,5 +196,6 @@ clean:
 	rm -rf packaging/secretshare.app packaging/secretshare.dmg
 	rm -rf packaging/gopath
 	rm -rf assets/secretshare.iconset
+	rm -f secretshare-gui.desktop
 
 .PHONY: all test clean deploy linux osx windows linux-install native mac_bundle dist deps
