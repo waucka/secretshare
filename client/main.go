@@ -47,7 +47,7 @@ var (
 // Returns a cli.ExitError with the given message, specified in a Printf-like way
 func e(format string, a ...interface{}) error {
 	msg := fmt.Sprintf(format, a...)
-	return cli.NewExitError(msg, 1)
+	return cli.NewExitError(fmt.Sprintf("ERROR: %s", msg), 1)
 }
 
 func loadConfig(configPath string) error {
