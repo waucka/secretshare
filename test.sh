@@ -144,6 +144,17 @@ echo "PASS"
 rm test.txt
 
 
+echo 'Test trying to send a directory'
+send_dir=$(mktemp -d)
+if $CLIENT send $send_dir; then
+    kill $server_pid
+    echo "Client should have exited with non-zero code, but didn't"
+    cat test-client.log
+    echo "FAIL"
+    exit 1
+fi
+
+
 echo 'Test receive with different name'
 echo -n "This is a test" > test.txt
 echo > test-client.log

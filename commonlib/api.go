@@ -150,6 +150,9 @@ func SendSecret(endpoint, bucket, bucketRegion, secretKey, filePath string, ttl 
 	if err != nil {
 		return "", "", makeSendError(FileOpenFailed, "Failed to open file: %s", err.Error())
 	}
+	if stats.IsDir() {
+		return "", "", makeSendError(FileOpenFailed, "File is a directory")
+	}
 	fileSize := stats.Size()
 	basename := filepath.Base(filePath)
 	requestBytes, err := json.Marshal(&UploadRequest{
